@@ -200,7 +200,7 @@ export const ProspectsList: React.FC<ProspectsListProps> = ({
           Opened
         </Button>
         
-        {/* <Button
+        <Button
           variant={filters.opened === false ? "default" : "outline"}
           size="sm"
           onClick={() => handleQuickFilter('opened', false)}
@@ -210,7 +210,7 @@ export const ProspectsList: React.FC<ProspectsListProps> = ({
           )}
         >
           Not Opened
-        </Button> */}
+        </Button>
 
         <Button
           variant={filters.unsubscribed === true ? "default" : "outline"}
@@ -224,7 +224,7 @@ export const ProspectsList: React.FC<ProspectsListProps> = ({
           Unsubscribed
         </Button>
 
-        {/* <Button
+        <Button
           variant={filters.opened === false && !filters.replied && !filters.meeting_clicked && !filters.unsubscribed ? "default" : "outline"}
           size="sm"
           onClick={() => handleQuickFilter('unread')}
@@ -234,7 +234,7 @@ export const ProspectsList: React.FC<ProspectsListProps> = ({
           )}
         >
           Unread
-        </Button> */}
+        </Button>
 
         {activeFiltersCount > 0 && (
           <Button

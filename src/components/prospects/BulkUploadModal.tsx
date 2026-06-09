@@ -79,7 +79,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ onClose, onSuccess })
         <p className="text-sm text-gray-600 mb-6">
           Download this{' '}
           <a 
-            href="https://json-saas-tempplate.s3.us-east-1.amazonaws.com/novitium.csv"
+            href="https://jazon-sass-bucket.s3.us-east-1.amazonaws.com/via-trm-prospects.csv"
             download="prospects-template.csv"
             className="text-purple-600 hover:text-purple-700 underline"
           >

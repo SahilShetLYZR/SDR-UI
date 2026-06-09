@@ -254,17 +254,5 @@ export const workflowService = {
   }
 };
 
-// Re-export relevant types
-export type {
-    ApiAction,
-    ApiWorkflowWithActions,
-    ApiWorkflowModel,
-    AddActionRequest,
-    UpdateActionRequest,
-    DeleteActionRequest,
-    ReorderActionsRequest,
-    ActionType,
-    ApiFile
-};
-
-// Remove ApiActionInputField export as it's no longer used
+// All types above are already exported via `export interface …` / `export type …`.
+// No re-export block needed.

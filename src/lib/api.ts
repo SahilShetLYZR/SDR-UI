@@ -6,7 +6,7 @@ import { USER_TOKEN, USER_KEY } from "./constants";
 export const DEFAULT_ERROR_MESSAGE = "Something went wrong. Please try again later.";
 
 // Base URL for API requests - get from environment variable or fallback to default
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8005";
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
 // Create an Axios instance without static headers.
 const api = axios.create({
@@ -17,7 +17,7 @@ const api = axios.create({
 // Request interceptor to set dynamic headers before each request.
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem(USER_TOKEN) ?? localStorage.getItem("_ms-mid") ?? "";
+    const token = localStorage.getItem(USER_TOKEN) ?? "";
     const apiKey = localStorage.getItem(USER_KEY) ?? "";
     // Set Authorization header with bearer token.
     if (config.headers) {
@@ -36,8 +36,6 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     const e: any = error?.response?.data;
     switch (error?.response?.status) {
-
-      case 403: return null
       case 400:
       case 422:
       case 500:

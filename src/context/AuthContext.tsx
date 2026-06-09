@@ -107,6 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // 2. Get additional user details + bearer token
         const sdkUserData = (await lyzr.getKeysUser()) as SdkUserData;
         console.log("SDK user data:", tokenData[0]);
+        console.log("User email:", sdkUserData?.data?.user?.email);
+        console.log("User ID:", sdkUserData?.data?.user?.user_id);
+
+        // Debug: Log current cookies to help identify auth persistence issues
+        console.log("Current cookies:", document.cookie);
 
         // Check Jazon permission directly from the SDK data
         const jazonAccess =
@@ -138,27 +143,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         localStorage.setItem("USER_DATA", JSON.stringify(userObj));
 
-        // Only update state if not already authenticated or if token changed
-        if (!isAuthenticated || urlToken !== token) {
-          setIsAuthenticated(true);
-          setUserId(tokenData[0].user_id);
-          setToken(urlToken || sdkUserData.data.org_id);
-          setUser(userObj);
-          setHasJazonAccess(jazonAccess);
-        }
+        // Always update state with fresh SDK data to prevent stale user info
+        setIsAuthenticated(true);
+        setUserId(tokenData[0].user_id);
+        setToken(urlToken || sdkUserData.data.org_id);
+        setUser(userObj);
+        setHasJazonAccess(jazonAccess);
       } else {
-
-        console.warn("No valid token data found from lyzr.getKeys()");
-        
         handleAuthFailure();
-
-        // lyzr.init("pk_c14a2728e715d9ea67bf"); // Re-init to trigger login modal
-        isInitializedRef.current = true// Reset initialization flag
-
       }
     } catch (err) {
-              console.warn("No valid token data found from lyzr.getKeys()22");
-
       console.error("Auth check failed:", err);
       handleAuthFailure();
     } finally {
@@ -178,6 +172,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(USER_TOKEN);
     localStorage.removeItem("user_id");
     localStorage.removeItem("USER_DATA");
+    // Also remove legacy Memberstack token if it exists
+    localStorage.removeItem("_ms-mid");
+
+    // Clear all Memberstack-related cookies
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i];
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+      if (name.startsWith("_ms-") || name.startsWith("memberstack")) {
+        // Delete the cookie for current domain
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        // Try to delete for parent domain as well
+        const domain = window.location.hostname.split('.').slice(-2).join('.');
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=." + domain;
+      }
+    }
   };
 
   // Add a logout function that calls lyzr.logout + clears local data
@@ -186,16 +197,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { default: lyzr } = await import("lyzr-agent");
       await lyzr.logout(); // log out from the SDK
       handleAuthFailure();
-      // Re-initialize the SDK after logout to trigger the auth modal
-      await lyzr.init("pk_c14a2728e715d9ea67bf");
-      checkAuth();
     } catch (err) {
       console.error("Failed to log out from lyzr:", err);
-      handleAuthFailure();
     }
+    // Clear local data
+    handleAuthFailure();
   };
 
-  // Attempt to load stored auth info on route changes.
+  // Attempt to load stored auth info for initial display only.
+  // SDK verification will confirm/update this data.
   useEffect(() => {
     const storedKey = localStorage.getItem(USER_KEY);
     const storedBearerToken = localStorage.getItem(USER_TOKEN);
@@ -204,11 +214,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedKey && storedBearerToken && storedUserData && !isAuthenticated) {
       try {
         const parsedUser = JSON.parse(storedUserData) as UserType;
+        // Only load for display - SDK verification will confirm authentication
         setUser(parsedUser);
-        setIsAuthenticated(true);
         setToken(storedBearerToken);
+        // Note: Not setting isAuthenticated here - let SDK verify first
       } catch (error) {
         console.error("Error parsing stored user data", error);
+        // If cached data is corrupted, clear it
+        handleAuthFailure();
       }
     }
   }, []);
@@ -227,7 +240,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isInitializedRef.current = true; // Mark as initialized
 
         unsubscribe = lyzr.onAuthStateChange((sdkAuthState) => {
-          if (sdkAuthState && !isAuthenticated) {
+          if (sdkAuthState) {
+            // Always check auth when SDK reports authenticated state
+            // This ensures we get fresh user data even if we have cached data
             checkAuth();
           } else if (!sdkAuthState) {
             handleAuthFailure();

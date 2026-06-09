@@ -10,18 +10,6 @@ const getOrdinal = (num: number): string => {
   return ordinals[num - 1] || `${num}th`;
 };
 
-// Helper function to convert time interval to days
-const convertToDays = (timeInterval: number): number => {
-  // If timeInterval is very large (> 365), assume it's in seconds and convert to days
-  // If timeInterval is small (≤ 365), assume it's already in days
-  if (timeInterval > 365) {
-    // Convert seconds to days (86400 seconds = 1 day)
-    return Math.round(timeInterval / 86400);
-  }
-  // Already in days
-  return timeInterval;
-};
-
 // Helper function to generate timing message
 const getTimingMessage = (timeInterval: number, position: number): string => {
   if (position === 0) {
@@ -29,14 +17,13 @@ const getTimingMessage = (timeInterval: number, position: number): string => {
   }
   
   const ordinalPosition = getOrdinal(position);
-  const daysInterval = convertToDays(timeInterval);
   
-  if (daysInterval === 0) {
+  if (timeInterval === 0) {
     return `This mail will be sent on the same day as completing the ${ordinalPosition} action`;
   }
   
-  const days = daysInterval === 1 ? "day" : "days";
-  return `This mail will be sent ${daysInterval} ${days} after completing the ${ordinalPosition} action`;
+  const days = timeInterval === 1 ? "day" : "days";
+  return `This mail will be sent ${timeInterval} ${days} after completing the ${ordinalPosition} action`;
 };
 
 export default function ActionCard({
@@ -62,12 +49,11 @@ export default function ActionCard({
     if (position === 0) {
       return "First action";
     }
-    const daysInterval = convertToDays(timeInterval);
-    if (daysInterval === 0) {
+    if (timeInterval === 0) {
       return "Same day";
     }
-    const days = daysInterval === 1 ? "day" : "days";
-    return `${daysInterval} ${days}`;
+    const days = timeInterval === 1 ? "day" : "days";
+    return `${timeInterval} ${days}`;
   };
 
   return (

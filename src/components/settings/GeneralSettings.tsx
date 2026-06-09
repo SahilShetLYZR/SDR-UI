@@ -22,10 +22,11 @@ interface GeneralSettingsProps {
   settings?: GeneralSettingsType;
   campaignId?: string;
   settingsId?: string;
+  campaignOwner?: string;
   onSettingsUpdated?: () => Promise<void>;
 }
 
-export default function GeneralSettings({ settings, campaignId, settingsId, onSettingsUpdated }: GeneralSettingsProps) {
+export default function GeneralSettings({ settings, campaignId, settingsId, campaignOwner, onSettingsUpdated }: GeneralSettingsProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   
@@ -39,6 +40,7 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
     agentAddress: '',
     agentSignature: '',
     campaignEmail: '',
+    campaignOwner: '',
     highEngagementNotifiers: '',
     threshold: ''
   });
@@ -98,6 +100,7 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
   const [agentAddress, setAgentAddress] = useState(settingsData.agent_address.field_value as string);
   const [agentSignature, setAgentSignature] = useState(settingsData.signature_image?.field_value as string || "https://ui-avatars.com/api/?name=Default&background=0D8ABC&color=fff&size=100");
   const [campaignEmail, setCampaignEmail] = useState(settingsData.campaign_email?.field_value as string || "");
+  const [campaignOwnerValue, setCampaignOwnerValue] = useState(campaignOwner || "");
   const [highEngagementNotifiers, setHighEngagementNotifiers] = useState(arrayToString(getArrayValue(settingsData.high_engagement_notifiers?.field_value)));
   const [threshold, setThreshold] = useState(settingsData.threshold?.field_value as number || 80);
   
@@ -132,7 +135,10 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
       setHighEngagementNotifiers(arrayToString(getArrayValue(settings.high_engagement_notifiers?.field_value)));
       setThreshold(settings.threshold?.field_value as number || 80);
     }
-  }, [settings]);
+    if (campaignOwner !== undefined) {
+      setCampaignOwnerValue(campaignOwner);
+    }
+  }, [settings, campaignOwner]);
   
   // Fetch email configurations when component mounts
   useEffect(() => {
@@ -306,12 +312,14 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
       // Validate agent signature (URL or base64)
       agentSignature: agentSignature && !agentSignature.startsWith('data:image/') ? validateUrl(agentSignature) : '',
       campaignEmail: emailConfigs.length > 0 && !campaignEmail ? 'Please select a campaign email' : '',
+      // Campaign owner is optional - no validation required
+      campaignOwner: '',
       highEngagementNotifiers: validateEmailList(highEngagementNotifiers),
       threshold: validateThreshold(threshold)
     };
-    
+
     setErrors(newErrors);
-    
+
     // Form is valid if all error messages are empty
     return Object.values(newErrors).every(error => error === '');
   };
@@ -393,10 +401,11 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
       };
       
       console.log("Updated settings:", updatedSettings);
-      
+
       // Make the API call to update the settings
       const result = await campaignSettingsService.updateSettingsById(settingsId, {
-        general: updatedSettings
+        general: updatedSettings,
+        campaign_owner: campaignOwnerValue || undefined
       });
       
       console.log("API response:", result);
@@ -460,13 +469,32 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
         </div>
 
         <div className="space-y-1">
+          <Label>Campaign Owner <span className="text-muted-foreground">(Optional)</span></Label>
+          <p className="text-sm text-muted-foreground">Name of the real person on whose behalf the AI is sending emails</p>
+        </div>
+        <div className="space-y-1">
+          <Input
+            value={campaignOwnerValue}
+            onChange={(e) => setCampaignOwnerValue(e.target.value)}
+            placeholder="e.g., John Doe"
+            className={errors.campaignOwner ? "border-red-500" : ""}
+          />
+          {errors.campaignOwner && (
+            <p className="text-sm text-red-500">{errors.campaignOwner}</p>
+          )}
+          <p className="text-sm text-muted-foreground">
+            This name will appear in email footers: "This email is being sent by AI on behalf of [Campaign Owner]"
+          </p>
+        </div>
+
+        <div className="space-y-1">
           <Label>Campaign Status</Label>
           <p className="text-sm text-muted-foreground">Enable or disable this campaign</p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Switch 
-            id="campaign-status" 
+          <Switch
+            id="campaign-status"
             checked={isActive}
             onCheckedChange={setIsActive}
           />
@@ -722,7 +750,7 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
         </div>
 
         <div className="space-y-1">
-          <Label>Engagement Score Threshold <span className="text-gray-100">(Optional)</span></Label>
+          <Label>Engagement Score Threshold <span className="text-red-500">*</span></Label>
           <p className="text-sm text-muted-foreground">Notify when engagement score reaches this threshold (0-100)</p>
         </div>
         <div className="space-y-1">
@@ -730,7 +758,7 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
             type="number"
             value={threshold}
             onChange={(e) => setThreshold(parseInt(e.target.value) || 0)}
-            placeholder="0"
+            placeholder="80"
             min="0"
             max="100"
             className={errors.threshold ? "border-red-500" : ""}
@@ -739,7 +767,7 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
             <p className="text-sm text-red-500">{errors.threshold}</p>
           )}
           <p className="text-sm text-muted-foreground">
-            When a prospect's engagement score reaches {threshold}, the notifiers will be alerted
+            When a prospect's engagement score reaches {threshold}%, the notifiers will be alerted
           </p>
         </div>
       </div>

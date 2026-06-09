@@ -36,7 +36,6 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess, campaignI
         if (campaign && campaign.kb_id) {
           setKbId(campaign.kb_id);
         } else {
-          return
           toast({
             title: "Error",
             description: "Could not find knowledge base ID for this campaign",

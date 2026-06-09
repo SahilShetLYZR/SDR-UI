@@ -49,7 +49,7 @@ export default function ActionResult({
     if (campaignSettings?.general?.campaign_email?.field_value) {
       return campaignSettings.general.campaign_email.field_value as string;
     }
-    return "jeremy@notivium.org"; // fallback to hardcoded value
+    return "john@richfire.us"; // fallback to hardcoded value
   };
 
   const displayEmail = getDisplayEmail();

@@ -1,11 +1,10 @@
 import React, {useState} from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, HomeIcon, Rocket, Settings, Shield } from 'lucide-react';
+import { ChevronLeft, ChevronRight, HomeIcon, Rocket, Settings } from 'lucide-react';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { cn } from '@/lib/utils';
 import AvatarButton from "@/components/layout/AvatarButton.tsx";
 import { Path } from '@/lib/types';
-import { useAdmin } from '@/hooks/useAdmin';
 
 interface UserProps {
   name: string;
@@ -66,7 +65,6 @@ const Sidebar: React.FC = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const location = useLocation();
-  const { isAdmin, loading: adminLoading } = useAdmin();
 
   const isSidebarOpen = isHovered || isDropdownOpen;
 
@@ -111,11 +109,7 @@ const Sidebar: React.FC = () => {
           icon={<Rocket className="h-5 w-5" />}
           label="Campaign"
           to="/campaign"
-          active={
-            location.search.includes('from=admin')
-              ? false
-              : location.pathname.includes('/campaign')
-          }
+          active={location.pathname.includes('/campaign')}
           isExpanded={isSidebarOpen}
         />
         <NavItem
@@ -125,18 +119,6 @@ const Sidebar: React.FC = () => {
           active={location.pathname.startsWith('/settings')}
           isExpanded={isSidebarOpen}
         />
-        {!adminLoading && isAdmin && (
-          <NavItem
-            icon={<Shield className="h-5 w-5" />}
-            label="Dashboard"
-            to={`/${Path.ADMIN}`}
-            active={
-              location.pathname.startsWith(`/${Path.ADMIN}`) ||
-              location.search.includes('from=admin')
-            }
-            isExpanded={isSidebarOpen}
-          />
-        )}
       </nav>
 
       <div className="mt-auto px-2 py-4">

@@ -51,10 +51,11 @@ export default function SettingsPage() {
         <div className="flex-1 p-6 overflow-auto">
           <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-sm p-6">
             {isTabActive("General") && (
-              <GeneralSettings 
-                settings={settings.general} 
-                campaignId={campaign._id} 
-                settingsId={campaign.settings_id} 
+              <GeneralSettings
+                settings={settings.general}
+                campaignId={campaign._id}
+                settingsId={campaign.settings_id}
+                campaignOwner={settings.campaign_owner}
               />
             )}
             {isTabActive("Materials") && (

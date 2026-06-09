@@ -237,7 +237,7 @@ export default function GenerateActionResult({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="primary"
+          variant="default"
           // Disable the trigger if essential IDs are missing
           disabled={!campaignId || !actionId}
           title={

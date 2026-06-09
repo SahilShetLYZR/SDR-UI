@@ -16,7 +16,6 @@ import WorkflowPage from "@/pages/WorkflowPage/WorkflowPage.tsx";
 import AnalyticsPage from "@/pages/Analytics.tsx";
 import Settings from "@/pages/SettingsPage.tsx";
 import DomainConfigPage from "@/pages/DomainConfigPage.tsx";
-import AdminDashboard from "@/pages/AdminDashboard.tsx";
 
 export const AnimatedRoutes = ()=> {
   return (
@@ -51,7 +50,6 @@ export const AnimatedRoutes = ()=> {
             </Route>
             <Route key={Path.SETTINGS} path={Path.SETTINGS} element={<Settings />} />
             <Route key={Path.DOMAIN_CONFIGS} path={Path.DOMAIN_CONFIGS} element={<DomainConfigPage />} />
-            <Route key={Path.ADMIN} path={Path.ADMIN} element={<AdminDashboard />} />
           </Route>
           <Route key="*" path="*" element={<NotFound />} />
         </Routes>

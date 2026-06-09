@@ -76,7 +76,7 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ onClose, onSucces
           id: prospect.id,
           name: formData.name,
           email: formData.email,
-          company: formData.company,
+          company_name: formData.company,
           position: formData.position,
           linkedin_url: formData.linkedin_url
         }]

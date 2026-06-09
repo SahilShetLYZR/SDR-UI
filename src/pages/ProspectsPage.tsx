@@ -301,34 +301,15 @@ const ProspectsPage: React.FC = () => {
           return;
         }
 
-        // Process the prospects data
-        const enhancedData = response.prospects.map((prospect: CampaignProspect) => {
-          // Make sure prospect_details exists to avoid errors
-          const details = prospect.prospect_details || {};
-          
-          return {
-            ...prospect,
-            // Use data from prospect_details if available, otherwise use data from the parent object
-            engagement_score:
-              details.engagement_score !== undefined
-                ? details.engagement_score
-                : (prospect.engagement_score !== undefined
-                    ? prospect.engagement_score
-                    : 0),
-            engagement_status:
-              details.engagement_status ||
-              prospect.engagement_status ||
-              "cold",
-            // Use phase from prospect_details if available, otherwise use sequence_status
-            sequence_status:
-              details.phase ||
-              prospect.phase ||
-              prospect.sequence_status ||
-              "Not Started",
-            is_active:
-              prospect.is_active !== undefined ? prospect.is_active : true,
-          };
-        });
+        // Process the prospects data — backend returns CampaignProspect with fields
+        // flat on each record (no prospect_details wrapper).
+        const enhancedData = response.prospects.map((prospect: CampaignProspect) => ({
+          ...prospect,
+          engagement_score: prospect.engagement_score ?? 0,
+          engagement_status: prospect.engagement_status || "cold",
+          sequence_status: prospect.phase || prospect.sequence_status || "Not Started",
+          is_active: prospect.is_active !== undefined ? prospect.is_active : true,
+        }));
 
         // Update the prospects state
         setProspects(enhancedData);

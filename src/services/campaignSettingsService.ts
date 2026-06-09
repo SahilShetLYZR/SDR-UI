@@ -65,6 +65,7 @@ export interface CampaignSettings {
   materials: MaterialsSettings;
   schedule: ScheduleSettings;
   others: OtherSettings;
+  campaign_owner?: string;
   created_at: string;
   updated_at: string;
 }

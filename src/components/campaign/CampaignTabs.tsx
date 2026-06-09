@@ -15,15 +15,13 @@ interface CampaignTabsProps {
 const CampaignTabs: React.FC<CampaignTabsProps> = ({ campaignId, isActive }) => {
   const location = useLocation();
 
-  const allTabs: CampaignTab[] = [
+  const tabs: CampaignTab[] = [
     { label: "Settings", path: `/campaign/${campaignId}/settings` },
     { label: "Prospects", path: `/campaign/${campaignId}/prospects` },
     { label: "Knowledge Base", path: `/campaign/${campaignId}/knowledge-base` },
     { label: "Workflow", path: `/campaign/${campaignId}/workflow` },
     { label: "Analytics", path: `/campaign/${campaignId}/analytics` },
   ];
-
-  const tabs = allTabs;
 
   return (
     <nav className="-mb-px">
