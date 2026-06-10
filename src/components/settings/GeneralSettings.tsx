@@ -63,7 +63,10 @@ export default function GeneralSettings({ settings, campaignId, settingsId, camp
     signature_image: { field_name: "signature_image", field_type: "single_field", field_value: "https://ui-avatars.com/api/?name=Default&background=0D8ABC&color=fff&size=100", field_options: null },
     campaign_email: { field_name: "campaign_email", field_type: "single_field", field_value: "", field_options: null },
     high_engagement_notifiers: { field_name: "high_engagement_notifiers", field_type: "multiple_field", field_value: [], field_options: null },
-    threshold: { field_name: "threshold", field_type: "single_field", field_value: 80, field_options: null }
+    threshold: { field_name: "threshold", field_type: "single_field", field_value: 80, field_options: null },
+    // AI-assisted disclosure for inbound replies (outbound mails never mention AI).
+    ai_disclosure_enabled: { field_name: "ai_disclosure_enabled", field_type: "boolean", field_value: true, field_options: null },
+    ai_disclosure_text: { field_name: "ai_disclosure_text", field_type: "single_field", field_value: "This message was drafted with AI assistance and reviewed by our team.", field_options: null },
   };
   
   const settingsData = settings || defaultSettings;
@@ -103,6 +106,15 @@ export default function GeneralSettings({ settings, campaignId, settingsId, camp
   const [campaignOwnerValue, setCampaignOwnerValue] = useState(campaignOwner || "");
   const [highEngagementNotifiers, setHighEngagementNotifiers] = useState(arrayToString(getArrayValue(settingsData.high_engagement_notifiers?.field_value)));
   const [threshold, setThreshold] = useState(settingsData.threshold?.field_value as number || 80);
+  const [aiDisclosureEnabled, setAiDisclosureEnabled] = useState(
+    settingsData.ai_disclosure_enabled?.field_value !== undefined
+      ? getBooleanValue(settingsData.ai_disclosure_enabled.field_value)
+      : true
+  );
+  const [aiDisclosureText, setAiDisclosureText] = useState(
+    (settingsData.ai_disclosure_text?.field_value as string) ||
+      "This message was drafted with AI assistance and reviewed by our team."
+  );
   
   // State for email configurations
   const [emailConfigs, setEmailConfigs] = useState<DomainConfig[]>([]);
@@ -134,6 +146,12 @@ export default function GeneralSettings({ settings, campaignId, settingsId, camp
       setCampaignEmail(settings.campaign_email?.field_value as string || "");
       setHighEngagementNotifiers(arrayToString(getArrayValue(settings.high_engagement_notifiers?.field_value)));
       setThreshold(settings.threshold?.field_value as number || 80);
+      if (settings.ai_disclosure_enabled?.field_value !== undefined) {
+        setAiDisclosureEnabled(getBooleanValue(settings.ai_disclosure_enabled.field_value));
+      }
+      if (typeof settings.ai_disclosure_text?.field_value === "string") {
+        setAiDisclosureText(settings.ai_disclosure_text.field_value as string);
+      }
     }
     if (campaignOwner !== undefined) {
       setCampaignOwnerValue(campaignOwner);
@@ -397,6 +415,14 @@ export default function GeneralSettings({ settings, campaignId, settingsId, camp
         threshold: {
           ...(settingsData.threshold || { field_name: "threshold", field_type: "single_field", field_options: null }),
           field_value: threshold
+        },
+        ai_disclosure_enabled: {
+          ...(settingsData.ai_disclosure_enabled || { field_name: "ai_disclosure_enabled", field_type: "boolean", field_options: null }),
+          field_value: aiDisclosureEnabled
+        },
+        ai_disclosure_text: {
+          ...(settingsData.ai_disclosure_text || { field_name: "ai_disclosure_text", field_type: "single_field", field_options: null }),
+          field_value: aiDisclosureText
         }
       };
       
@@ -582,6 +608,32 @@ export default function GeneralSettings({ settings, campaignId, settingsId, camp
           {errors.agentAddress && (
             <p className="text-sm text-red-500">{errors.agentAddress}</p>
           )}
+        </div>
+
+        <div className="space-y-1">
+          <Label>AI-assisted reply disclosure</Label>
+          <p className="text-sm text-muted-foreground">
+            Outbound emails never mention AI. When enabled, this short disclosure is appended to <em>reply</em> emails only.
+          </p>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={aiDisclosureEnabled}
+              onCheckedChange={setAiDisclosureEnabled}
+              id="ai-disclosure-enabled"
+            />
+            <Label htmlFor="ai-disclosure-enabled" className="text-sm font-normal">
+              Append AI disclosure to replies
+            </Label>
+          </div>
+          <Textarea
+            value={aiDisclosureText}
+            onChange={(e) => setAiDisclosureText(e.target.value)}
+            placeholder="This message was drafted with AI assistance and reviewed by our team."
+            disabled={!aiDisclosureEnabled}
+            rows={2}
+          />
         </div>
 
         <div className="space-y-1">
