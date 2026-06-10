@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {PlusIcon, Search, Eye, Loader2, Copy, Trash2, CopyPlus} from 'lucide-react';
+import {PlusIcon, Search, Eye, Copy, Trash2, CopyPlus} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TableSkeleton } from '@/components/ui/skeletons';
 import { cn } from '@/lib/utils';
 import { campaignService, ApiCampaign } from '@/services/campaignService';
 import { useToast } from '@/components/ui/use-toast';
@@ -189,9 +191,9 @@ const CampaignPage: React.FC = () => {
 
       <div className="p-6 flex-1">
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-            <span className="ml-2 text-gray-500">Loading campaigns...</span>
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full max-w-sm" />
+            <TableSkeleton rows={5} cols={5} />
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">

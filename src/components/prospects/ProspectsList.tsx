@@ -6,6 +6,7 @@ import { useProspects, ProspectsFilters } from '@/hooks/useProspects';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Prospect } from '@/types/prospects';
+import { ListRowsSkeleton } from "@/components/ui/skeletons";
 import api from '@/lib/api';
 import {
   Select,
@@ -300,7 +301,7 @@ export const ProspectsList: React.FC<ProspectsListProps> = ({
       {/* Prospects List */}
       <div className="border rounded-md overflow-hidden">
         {loading ? (
-          <div className="p-4 text-center text-sm text-gray-500">Loading...</div>
+          <ListRowsSkeleton rows={5} />
         ) : error ? (
           <div className="p-4 text-center text-sm text-red-500">Error loading prospects</div>
         ) : prospects.length === 0 ? (

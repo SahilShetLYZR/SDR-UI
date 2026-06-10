@@ -14,13 +14,17 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // lyzr-agent is a GitHub dependency that ships no built dist/ (its package.json
+      // points at dist/index.js, which never gets built on install). Resolve the bare
+      // import straight to its TypeScript source so Vite/esbuild transpiles it.
+      "lyzr-agent": path.resolve(
+        __dirname,
+        "./node_modules/lyzr-agent/src/index.ts"
+      ),
     },
   },
   optimizeDeps: {
-    exclude: [
-      // Add the problematic dependency here
-      // Based on the error, it's likely related to a package from node_modules
-      "lyzr-agent" // This is a GitHub dependency which might be causing issues
-    ]
+    // Excluded from pre-bundling because it's aliased to raw TS source above.
+    exclude: ["lyzr-agent"],
   },
 }));

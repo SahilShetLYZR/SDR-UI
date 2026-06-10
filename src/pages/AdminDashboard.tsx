@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { TableSkeleton } from '@/components/ui/skeletons';
 import { cn } from '@/lib/utils';
 import { adminService, AdminCampaignsResponse } from '@/services/adminService';
 import { ApiCampaign } from '@/services/campaignService';
@@ -188,10 +189,7 @@ const AdminDashboard: React.FC = () => {
 
           <div className="bg-white rounded-lg border overflow-hidden">
             {isLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-                <span className="ml-2 text-gray-500">Loading campaigns...</span>
-              </div>
+              <TableSkeleton rows={6} cols={7} className="border-0 rounded-none" />
             ) : error ? (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <p className="text-red-500 mb-4">{error}</p>

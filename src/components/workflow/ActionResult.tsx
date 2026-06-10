@@ -2,6 +2,7 @@ import React, {useState, useEffect} from "react";
 import { Loader2 } from "lucide-react";
 import { format } from 'date-fns';
 import { campaignSettingsService, CampaignSettings } from '@/services/campaignSettingsService';
+import { formatEmailHtml, formatEmailSubject } from '@/lib/emailFormat';
 
 interface ActionResultProps {
   isLoading: boolean;
@@ -117,7 +118,7 @@ export default function ActionResult({
       {!isLoading && !error && subject !== null && content !== null && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-grow">
           <div className="p-4 border-b border-gray-200">
-            <h2 className="text-xl font-medium text-gray-800">{subject}</h2>
+            <h2 className="text-xl font-medium text-gray-800">{formatEmailSubject(subject)}</h2>
             <div className="flex items-center mt-3 text-sm text-gray-500">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
@@ -147,7 +148,7 @@ export default function ActionResult({
                 lineHeight: '1.6',
                 fontSize: '1rem'
               }}
-              dangerouslySetInnerHTML={{__html: content ? bodyContent(content) : ''}}
+              dangerouslySetInnerHTML={{__html: content ? formatEmailHtml(bodyContent(content)) : ''}}
             />
           </div>
         </div>

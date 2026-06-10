@@ -8,6 +8,12 @@ import {
   useRef,
 } from "react";
 import { USER_KEY, USER_TOKEN } from "@/lib/constants";
+import { isLocalStudioAuth } from "@/utils/env";
+import {
+  buildStudioSession,
+  getStudioToken,
+  studioLogout,
+} from "@/lib/studioAuth";
 
 // The token data returned by the SDK.getKeys() call.
 interface TokenData {
@@ -93,8 +99,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [hasJazonAccess, setHasJazonAccess] = useState(false);
   const isInitializedRef = useRef(false);
   // A helper to re-check authentication when called.
+  // Real Studio session for local dev (VITE_LOCAL_STUDIO_AUTH=true):
+  // Memberstack token from the cookie/popup -> Pagos keys + user. No SDK,
+  // no studio.lyzr.ai redirect, no agent provisioning.
+  const checkStudioLocalAuth = async () => {
+    try {
+      setIsInitializing(true);
+      const studioToken = await getStudioToken();
+      if (!studioToken) {
+        handleAuthFailure();
+        return;
+      }
+      const session = await buildStudioSession(studioToken);
+      if (!session) {
+        console.warn("Studio token present but Pagos session could not be built");
+        handleAuthFailure();
+        return;
+      }
+      localStorage.setItem(USER_KEY, session.apiKey);
+      localStorage.setItem(USER_TOKEN, studioToken);
+      localStorage.setItem("user_id", session.user.user_id);
+      localStorage.setItem("USER_DATA", JSON.stringify(session.user));
+      setIsAuthenticated(true);
+      setUserId(session.user.user_id);
+      setToken(studioToken);
+      setUser(session.user);
+      setHasJazonAccess(session.hasJazonAccess);
+    } catch (err) {
+      console.error("Local Studio auth failed:", err);
+      handleAuthFailure();
+    } finally {
+      setIsInitializing(false);
+      setIsLoading(false);
+    }
+  };
+
   const checkAuth = async () => {
     if (isInitializing) return; // Prevent multiple simultaneous checks
+    if (isLocalStudioAuth()) {
+      await checkStudioLocalAuth();
+      return;
+    }
 
     try {
       setIsInitializing(true);
@@ -182,6 +227,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Add a logout function that calls lyzr.logout + clears local data
   const logout = async () => {
+    if (isLocalStudioAuth()) {
+      try {
+        await studioLogout();
+      } finally {
+        handleAuthFailure();
+        setIsLoading(false);
+      }
+      return;
+    }
     try {
       const { default: lyzr } = await import("lyzr-agent");
       await lyzr.logout(); // log out from the SDK
@@ -219,6 +273,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const init = async () => {
       if (isInitializedRef.current) return; // Use persistent ref
+
+      // Local real-Studio auth: resume an existing Memberstack session if
+      // one exists; otherwise land on /auth/login where the Google popup
+      // sign-in lives. The lyzr-agent SDK is never initialized (its modal
+      // hides #root and only offers the broken localhost redirect).
+      if (isLocalStudioAuth()) {
+        isInitializedRef.current = true;
+        await checkStudioLocalAuth();
+        return;
+      }
 
       try {
         const { default: lyzr } = await import("lyzr-agent");
