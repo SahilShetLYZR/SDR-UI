@@ -1,34 +1,10 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, HomeIcon, Rocket, Settings } from 'lucide-react';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { cn } from '@/lib/utils';
 import AvatarButton from "@/components/layout/AvatarButton.tsx";
 import { Path } from '@/lib/types';
-
-interface UserProps {
-  name: string;
-  avatar?: string;
-}
-
-const User: React.FC<UserProps> = ({ name, avatar }) => {
-  const { isExpanded } = useSidebarStore();
-  
-  return (
-    <div className="flex items-center gap-2 p-4">
-      <div className="shrink-0 h-8 w-8 rounded-full overflow-hidden bg-purple-100 flex items-center justify-center">
-        {avatar ? (
-          <img src={avatar} alt={name} className="h-full w-full object-cover" />
-        ) : (
-          <span className="text-purple-600 font-semibold text-sm">{name.charAt(0)}</span>
-        )}
-      </div>
-      {isExpanded && (
-        <span className="font-semibold text-gray-800 truncate transition-all duration-300 text-sm">{name}</span>
-      )}
-    </div>
-  );
-};
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -42,16 +18,22 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, to, active, isExpanded }
   return (
     <Link
       to={to}
+      title={isExpanded ? undefined : label}
+      aria-label={label}
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        "flex items-center px-3 py-2 rounded-md text-sm font-medium",
-        active ? "bg-purple-100 text-purple-600" : "hover:bg-gray-50",
+        "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        active
+          ? "bg-purple-100 text-purple-700"
+          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
       )}
     >
-      <span className="min-w-[20px] flex justify-center">{icon}</span>
+      <span className="flex min-w-[20px] justify-center">{icon}</span>
       <span
         className={cn(
           "ml-3 overflow-hidden whitespace-nowrap transition-all",
-          isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
+          isExpanded ? "w-auto opacity-100" : "w-0 opacity-0"
         )}
       >
         {label}
@@ -61,7 +43,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, to, active, isExpanded }
 };
 
 const Sidebar: React.FC = () => {
-  const { isExpanded, toggleSidebar } = useSidebarStore();
+  const { toggleSidebar } = useSidebarStore();
   const [isHovered, setIsHovered] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const location = useLocation();
@@ -79,25 +61,30 @@ const Sidebar: React.FC = () => {
     >
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center">
-          <img alt="jazon picture" src="/Lyzr-Logo.svg" width={35} />
+          <img alt="Jazon logo" src="/Lyzr-Logo.svg" width={35} />
           {isSidebarOpen && (
             <>
               <div className="mx-2 h-6 w-px bg-gray-200" />
-              <span className="text-2xl font-medium font-arial">Jazon</span>
+              <span className="text-xl font-semibold tracking-tight text-gray-900">Jazon</span>
             </>
           )}
         </div>
       </div>
 
-      <div className="sidebar-toggle-button cursor-pointer" onClick={toggleSidebar}>
+      <button
+        type="button"
+        aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+        className="sidebar-toggle-button cursor-pointer hover:bg-gray-50"
+        onClick={toggleSidebar}
+      >
         {isSidebarOpen ? (
           <ChevronLeft className="h-4 w-4" />
         ) : (
           <ChevronRight className="h-4 w-4" />
         )}
-      </div>
+      </button>
 
-      <nav className="flex-1 px-2 py-4 space-y-1">
+      <nav className="flex-1 space-y-1 px-2 py-4">
         <NavItem
           icon={<HomeIcon className="h-5 w-5" />}
           label="Home"
@@ -107,7 +94,7 @@ const Sidebar: React.FC = () => {
         />
         <NavItem
           icon={<Rocket className="h-5 w-5" />}
-          label="Campaign"
+          label="Campaigns"
           to="/campaign"
           active={location.pathname.includes('/campaign')}
           isExpanded={isSidebarOpen}
@@ -121,9 +108,8 @@ const Sidebar: React.FC = () => {
         />
       </nav>
 
-      <div className="mt-auto px-2 py-4">
+      <div className="mt-auto border-t px-2 py-3">
         <AvatarButton
-          name="Peter Parker"
           isExpanded={isSidebarOpen}
           onDropdownOpenChange={setIsDropdownOpen}
         />

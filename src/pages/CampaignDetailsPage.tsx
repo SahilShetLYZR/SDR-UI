@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, PlusIcon, Loader2 } from 'lucide-react';
+import { ChevronLeft, PlusIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import CampaignTabs from '@/components/campaign/CampaignTabs';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -125,9 +126,18 @@ const CampaignDetailsPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-        <span className="ml-2 text-gray-500">Loading campaign details...</span>
+      <div className="h-full flex flex-col" role="status" aria-label="Loading campaign details">
+        <header className="border-b bg-white px-6 py-4">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-5 w-5 rounded" />
+            <Skeleton className="h-7 w-64" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </div>
+        </header>
+        <div className="flex-1 space-y-4 p-6">
+          <Skeleton className="h-9 w-80" />
+          <Skeleton className="h-64 w-full rounded-lg" />
+        </div>
       </div>
     );
   }

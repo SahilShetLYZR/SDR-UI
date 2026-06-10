@@ -41,6 +41,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess, campaignI
             description: "Could not find knowledge base ID for this campaign",
             variant: "destructive"
           });
+          return;
         }
       } catch (error) {
         console.error('Error fetching campaign details:', error);

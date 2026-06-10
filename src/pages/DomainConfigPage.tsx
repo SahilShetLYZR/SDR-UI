@@ -6,6 +6,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader2, PlusCircle, AlertCircle, Trash2, Mail } from 'lucide-react';
 import AddDomainConfigDialog from '@/components/settings/AddDomainConfigDialog';
+import { TableSkeleton } from '@/components/ui/skeletons';
 import { domainConfigService, DomainConfig } from '@/services/domainConfigService';
 import { useToast } from '@/components/ui/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -93,10 +94,7 @@ const DomainConfigPage: React.FC = () => {
       )}
 
        {isLoading && (
-        <div className="flex justify-center items-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-          <span className="ml-3 text-lg">Loading Configurations...</span>
-        </div>
+        <TableSkeleton rows={3} cols={5} cellClassName="py-4 px-6" className="shadow-sm" />
       )}
 
       {error && !isLoading && (

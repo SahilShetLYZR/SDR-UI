@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import * as Diff from "diff";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatEmailSubject, unescapeLiteralSequences } from "@/lib/emailFormat";
 import { Badge } from "@/components/ui/badge";
 import { Send, Eye, Copy, Save, ArrowLeft } from "lucide-react";
 import { ApiAction } from "@/services/WorkflowService";
@@ -596,10 +598,16 @@ export default function EmailTemplateEditor({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full bg-white">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent mb-4"></div>
-          <div className="text-lg font-semibold text-gray-700">Loading email template...</div>
+      <div className="flex h-full flex-col gap-4 bg-white p-6" role="status" aria-label="Loading email template">
+        <Skeleton className="h-9 w-2/5" />
+        <Skeleton className="h-10 w-full" />
+        <div className="flex-1 space-y-3 rounded-lg border p-4">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-11/12" />
+          <Skeleton className="h-4 w-4/5" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-3/4" />
         </div>
       </div>
     );
@@ -694,13 +702,13 @@ export default function EmailTemplateEditor({
                       {hasSubjectChanges ? (
                         <DiffDisplay
                           title=""
-                          oldText={diffState.oldTemplate!.subject}
-                          newText={diffState.newTemplate!.subject}
+                          oldText={formatEmailSubject(diffState.oldTemplate!.subject)}
+                          newText={formatEmailSubject(diffState.newTemplate!.subject)}
                           onComplete={hasContentChanges ? () => {} : handleDiffComplete}
                         />
                       ) : (
                         <div className="text-lg font-medium text-gray-900">
-                          {emailTemplate.subject}
+                          {formatEmailSubject(emailTemplate.subject)}
                         </div>
                       )}
                     </div>
@@ -710,13 +718,13 @@ export default function EmailTemplateEditor({
                       {hasContentChanges ? (
                         <DiffDisplay
                           title=""
-                          oldText={diffState.oldTemplate!.content}
-                          newText={diffState.newTemplate!.content}
+                          oldText={unescapeLiteralSequences(diffState.oldTemplate!.content)}
+                          newText={unescapeLiteralSequences(diffState.newTemplate!.content)}
                           onComplete={handleDiffComplete}
                         />
                       ) : (
                         <div className="whitespace-pre-wrap text-gray-800 leading-relaxed" style={{ fontSize: '15px' }}>
-                          {emailTemplate.content}
+                          {unescapeLiteralSequences(emailTemplate.content)}
                         </div>
                       )}
                     </div>

@@ -13,3 +13,5 @@ bun.lockb
 package-lock.json
 
 .idea
+fix.md
+.gstack/

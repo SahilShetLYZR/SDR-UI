@@ -1,61 +1,71 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Legend,
-  CartesianGrid 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell,
+  CartesianGrid
 } from "recharts";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { useState, useEffect } from "react";
-import { FilterIcon } from "@/components/icons/filter-icon";
+import { useState, useEffect, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
-import { ChevronUpIcon, ChevronDownIcon, CalendarIcon, SearchIcon } from "@/components/icons/index";
+import { ChevronUpIcon, CalendarIcon, SearchIcon } from "@/components/icons/index";
 import { SendVolumeIcon, OpenRateIcon, RepliesIcon, ClickRateIcon, UnsubscribedIcon } from "@/components/icons/metrics-icons";
 import { ProspectsList } from "@/components/prospects/ProspectsList";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton, EmailHistorySkeleton } from "@/components/analytics/skeletons";
 import { format } from "date-fns";
 import { useParams } from "react-router-dom";
-import { campaignService } from "@/services/campaignService";
 import api from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { formatEmailHtml, formatEmailSubject } from "@/lib/emailFormat";
 import { useToast } from "@/components/ui/use-toast";
 
-// Sample data for charts - TODO: Replace with API data
-const lineData = [
-  { name: "Jan", value: 186 },
-  { name: "Feb", value: 305 },
-  { name: "Mar", value: 237 },
-  { name: "Apr", value: 73 },
-  { name: "May", value: 209 },
-  { name: "Jun", value: 214 },
-];
+// Chart accent aligned with the brand primary (purple)
+const CHART_COLOR = "#8B5CF6";
 
-const barData = [
-  { name: "Designation 1", value: 63 },
-  { name: "Designation 2", value: 88 },
-  { name: "Designation 3", value: 71 },
-  { name: "Designation 4", value: 33 },
-  { name: "Designation 5", value: 68 },
-  { name: "Designation 6", value: 69 },
-];
+interface MetricCardProps {
+  icon: ReactNode;
+  label: string;
+  value: string | number;
+  sub?: string;
+  loading: boolean;
+}
 
-const pieData = [
-  { name: "United States", value: 500, color: "#1e3a5f" },
-  { name: "Canada", value: 250, color: "#ff7b72" },
-  { name: "New York", value: 200, color: "#ffd700" },
-  { name: "Alaska", value: 100, color: "#2ea44f" },
-  { name: "Others", value: 75, color: "#f97316" },
-];
+function MetricCard({ icon, label, value, sub, loading }: MetricCardProps) {
+  return (
+    <Card className="transition-shadow duration-200 hover:shadow-md">
+      <div className="p-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&_svg]:h-4 [&_svg]:w-4">
+            {icon}
+          </span>
+          <span className="truncate text-sm font-medium text-muted-foreground">{label}</span>
+        </div>
+        <div className="mt-3 flex items-baseline justify-between gap-2">
+          {loading ? (
+            <Skeleton className="h-8 w-20" />
+          ) : (
+            <span className="animate-fade-in text-2xl font-semibold tabular-nums tracking-tight">
+              {value}
+            </span>
+          )}
+          {sub && !loading && (
+            <span className="truncate text-xs text-muted-foreground">{sub}</span>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 // Interface for campaign metrics
 interface CampaignMetrics {
@@ -141,14 +151,13 @@ interface PositionData {
   positions: {
     position: string;
     total_score: number;
+    count?: number;
   }[];
 }
 
 export default function AnalyticsPage() {
   const { id: campaignId } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [selectedTab, setSelectedTab] = useState("All");
   const [dateRange, setDateRange] = useState("alltime");
   const [startDate, setStartDate] = useState<Date | undefined>(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
@@ -285,8 +294,8 @@ export default function AnalyticsPage() {
     }
   };
 
-  // Fetch daily metrics for the last 7 days
-  const fetchDailyMetrics = async (metricType: string = "sent", customStartDate?: Date) => {
+  // Fetch daily metrics for the last 7 days in a single request
+  const fetchDailyMetrics = async (metricType: string = "sent") => {
     if (!campaignId) {
       console.error("Campaign ID is missing");
       return;
@@ -294,90 +303,26 @@ export default function AnalyticsPage() {
 
     try {
       setIsLoadingDailyMetrics(true);
-      
-      // Calculate date range (last 7 days by default)
-      const endDate = new Date();
-      const startDate = customStartDate || new Date(endDate.getTime() - 6 * 24 * 60 * 60 * 1000); // 7 days including today
-      
-      console.log(`Fetching daily metrics for ${metricType} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
-      
-      // Initialize an array to hold the daily counts
-      const dailyCounts: DailyMetric[] = [];
-      
-      // Create an array of dates for the last 7 days
-      const dates: Date[] = [];
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-        dates.push(date);
+
+      const params: Record<string, string> = { metric_type: metricType };
+      if (selectedAction !== "all") {
+        params.phase = selectedAction;
       }
-      
-      // For each date, fetch the metrics
-      for (const date of dates) {
-        // Set the start and end of the day
-        const dayStart = new Date(date);
-        dayStart.setHours(0, 0, 0, 0);
-        
-        const dayEnd = new Date(date);
-        dayEnd.setHours(23, 59, 59, 999);
-        
-        // Build query parameters
-        const params: Record<string, any> = {
-          start_date: dayStart.toISOString(),
-          end_date: dayEnd.toISOString()
-        };
-        
-        if (selectedAction !== "all") {
-          params.phase = selectedAction;
-        }
-        
-        // Determine which API endpoint and parameters to use based on the metric type
-        let response;
-        if (metricType === "sent") {
-          // For sent emails, we can use the campaign metrics API
-          response = await api.get(`/analytics/campaign/${campaignId}/metrics`, { params });
-          
-          // Format the date as "MMM DD" (e.g., "Apr 08")
-          const formattedDate = format(date, "MMM dd");
-          
-          // Add the count to our daily metrics
-          dailyCounts.push({
-            date: formattedDate,
-            count: response.data.total_mails || 0
-          });
-        } else {
-          // For other metrics (opens, clicks, replies), we need to count from the mail history
-          // This is a simplified approach - in a real implementation, you might want to use a dedicated API endpoint
-          response = await api.get(`/analytics/campaign/${campaignId}/metrics`, { params });
-          
-          let count = 0;
-          switch (metricType) {
-            case "opens":
-              count = response.data.total_opens || 0;
-              break;
-            case "clicks":
-              count = response.data.total_clicks || 0;
-              break;
-            case "replies":
-              count = response.data.total_replies || 0;
-              break;
-            default:
-              count = 0;
-          }
-          
-          // Format the date as "MMM DD" (e.g., "Apr 08")
-          const formattedDate = format(date, "MMM dd");
-          
-          // Add the count to our daily metrics
-          dailyCounts.push({
-            date: formattedDate,
-            count
-          });
-        }
-      }
-      
-      console.log('Daily metrics:', dailyCounts);
+
+      const response = await api.get(
+        `/analytics/campaign/${campaignId}/daily-metrics`,
+        { params }
+      );
+
+      const dailyCounts: DailyMetric[] = (response.data || []).map(
+        (entry: { date: string; count: number }) => ({
+          // Backend dates are UTC "YYYY-MM-DD"; format label as "MMM dd"
+          date: format(new Date(`${entry.date}T00:00:00`), "MMM dd"),
+          count: entry.count || 0,
+        })
+      );
+
       setDailyMetrics(dailyCounts);
-      
     } catch (error) {
       console.error('Error fetching daily metrics:', error);
       toast({
@@ -754,92 +699,48 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="p-4 bg-gray-50">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-2 text-gray-500">
-              <SendVolumeIcon className="h-5 w-5" />
-              <span className="text-sm">Total Send volume</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-semibold">
-                {isLoadingMetrics ? '...' : metrics?.total_mails || 0}
-              </span>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4 bg-gray-50">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-2 text-gray-500">
-              <OpenRateIcon className="h-5 w-5" />
-              <span className="text-sm">Open Rate</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-semibold">
-                {isLoadingMetrics ? '...' : `${(metrics?.open_rate || 0).toFixed(1)}%`}
-              </span>
-              <span className="text-xs text-gray-500">
-                {metrics?.total_opens || 0} opens
-              </span>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4 bg-gray-50">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-2 text-gray-500">
-              <RepliesIcon className="h-5 w-5" />
-              <span className="text-sm">Replies</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-semibold">
-                {isLoadingMetrics ? '...' : metrics?.total_replies || 0}
-              </span>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4 bg-gray-50">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-2 text-gray-500">
-              <ClickRateIcon className="h-5 w-5" />
-              <span className="text-sm">Clicks</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-semibold">
-                {isLoadingMetrics ? '...' : metrics?.total_clicks || 0}
-              </span>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4 bg-gray-50">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-2 text-gray-500">
-              <UnsubscribedIcon className="h-5 w-5" />
-              <span className="text-sm">Unsubscribed</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-semibold">
-                {isLoadingMetrics ? '...' : metrics?.total_unsubscribes || 0}
-              </span>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4 bg-gray-50">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-2 text-gray-500">
-              <ClickRateIcon className="h-5 w-5" />
-              <span className="text-sm">Meeting Clicks</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-semibold">
-                {isLoadingMetrics ? '...' : metrics?.total_meeting_clicks || 0}
-              </span>
-            </div>
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+        <MetricCard
+          icon={<SendVolumeIcon className="h-4 w-4" />}
+          label="Total Send volume"
+          value={metrics?.total_mails || 0}
+          loading={isLoadingMetrics}
+        />
+        <MetricCard
+          icon={<OpenRateIcon className="h-4 w-4" />}
+          label="Open Rate"
+          value={`${(metrics?.open_rate || 0).toFixed(1)}%`}
+          sub={`${metrics?.total_opens || 0} opens`}
+          loading={isLoadingMetrics}
+        />
+        <MetricCard
+          icon={<RepliesIcon className="h-4 w-4" />}
+          label="Replies"
+          value={metrics?.total_replies || 0}
+          loading={isLoadingMetrics}
+        />
+        <MetricCard
+          icon={<ClickRateIcon className="h-4 w-4" />}
+          label="Clicks"
+          value={metrics?.total_clicks || 0}
+          loading={isLoadingMetrics}
+        />
+        <MetricCard
+          icon={<UnsubscribedIcon className="h-4 w-4" />}
+          label="Unsubscribed"
+          value={metrics?.total_unsubscribes || 0}
+          loading={isLoadingMetrics}
+        />
+        <MetricCard
+          icon={<ClickRateIcon className="h-4 w-4" />}
+          label="Meeting Clicks"
+          value={metrics?.total_meeting_clicks || 0}
+          loading={isLoadingMetrics}
+        />
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <Card className="bg-gray-50">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="transition-shadow duration-200 hover:shadow-md">
           <CardContent className="pt-6 pl-5">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-semibold">Progress rate</h3>
@@ -859,15 +760,7 @@ export default function AnalyticsPage() {
               </Select>
             </div>
             {isLoadingDailyMetrics ? (
-              <div className="flex justify-center items-center h-[240px]">
-                <div className="inline-block animate-spin mr-2">
-                  <svg className="h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </div>
-                <span className="text-gray-500">Loading metrics...</span>
-              </div>
+              <ChartSkeleton layout="columns" bars={7} />
             ) : (
               <ResponsiveContainer width="100%" height={240}>
                 <LineChart 
@@ -899,15 +792,15 @@ export default function AnalyticsPage() {
                       boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
                     }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="count" 
-                    name={selectedMetricType === "sent" ? "Emails Sent" : 
-                          selectedMetricType === "opens" ? "Opens" : 
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    name={selectedMetricType === "sent" ? "Emails Sent" :
+                          selectedMetricType === "opens" ? "Opens" :
                           selectedMetricType === "clicks" ? "Clicks" : "Replies"}
-                    stroke="#0d9488" 
-                    strokeWidth={2} 
-                    dot={{ fill: "#0d9488", strokeWidth: 2, r: 4 }}
+                    stroke={CHART_COLOR}
+                    strokeWidth={2}
+                    dot={{ fill: CHART_COLOR, strokeWidth: 2, r: 4 }}
                     activeDot={{ r: 6 }}
                   />
                 </LineChart>
@@ -915,129 +808,100 @@ export default function AnalyticsPage() {
             )}
           </CardContent>
         </Card>
-        <Card className="bg-gray-50">
+        <Card className="transition-shadow duration-200 hover:shadow-md">
           <CardContent className="pt-6 pl-5">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-semibold">Engagement score by position</h3>
             </div>
             {isLoadingPositions ? (
-              <div className="flex justify-center items-center h-[240px]">
-                <div className="inline-block animate-spin mr-2">
-                  <svg className="h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </div>
-                <span className="text-gray-500">Loading position data...</span>
-              </div>
+              <ChartSkeleton layout="rows" bars={5} />
             ) : positionData && positionData.positions.length > 0 ? (
-              <div className="h-[240px] overflow-y-auto pr-2">
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart
-                    data={positionData.positions
-                      .slice(0, 5) // Only show top 5 designations
-                      .map(item => ({
-                        name: item.position,
-                        value: item.total_score || 0.1 // Use 0.1 for zero values to show a small bump
-                      }))}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 5, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f0f0f0" />
-                    <XAxis 
-                      type="number" 
-                      axisLine={true}
-                      tickLine={true}
-                      tick={{ fontSize: 10 }}
-                      domain={[0, 'dataMax + 1']}
-                      allowDecimals={false}
-                    />
-                    <YAxis 
-                      type="category"
-                      dataKey="name" 
-                      axisLine={false}
-                      tickLine={false}
-                      tick={false}
-                      width={10}
-                    />
-                    <Tooltip 
-                      formatter={(value) => [`${value} score`, '']}
-                      contentStyle={{ 
-                        backgroundColor: '#fff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px',
-                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                      }}
-                    />
-                    <Bar 
-                      dataKey="value" 
-                      fill="#0d9488" /* Teal color */
-                      radius={[0, 4, 4, 0]}
-                      barSize={30}
-                      label={(props) => {
-                        const { x, y, width, height, value, name } = props;
-                        // Always render label, even for small bars
-                        const actualValue = value === 0.1 ? 0 : value; // Convert back to 0 for display
-                        return (
-                          <g>
-                            <text
-                              x={x + 10}
-                              y={y + height / 2}
-                              fill="#fff"
-                              textAnchor="start"
-                              dominantBaseline="middle"
-                              fontSize={10}
-                              fontWeight="bold"
+              (() => {
+                const maxScore = Math.max(
+                  ...positionData.positions.map((p) => p.total_score || 0)
+                );
+                const noEngagementYet = maxScore === 0;
+                const maxCount = Math.max(
+                  ...positionData.positions.map((p) => p.count || 0),
+                  1
+                );
+                const positions = [...positionData.positions].sort((a, b) =>
+                  noEngagementYet
+                    ? (b.count || 0) - (a.count || 0)
+                    : (b.total_score || 0) - (a.total_score || 0)
+                );
+                return (
+                  <>
+                    <div className={cn("space-y-4 overflow-y-auto pr-2 pt-1", noEngagementYet ? "h-[214px]" : "h-[240px]")}>
+                      {positions.map((item) => (
+                        <div key={item.position}>
+                          <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span
+                              className="truncate text-xs font-medium text-gray-600"
+                              title={item.position}
                             >
-                              {name}
-                            </text>
-                            <text
-                              x={x + width - 10}
-                              y={y + height / 2}
-                              fill="#fff"
-                              textAnchor="end"
-                              dominantBaseline="middle"
-                              fontSize={10}
-                            >
-                              {actualValue}
-                            </text>
-                          </g>
-                        );
-                      }}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+                              {item.position}
+                            </span>
+                            <span className="flex shrink-0 items-baseline gap-2">
+                              {item.count !== undefined && (
+                                <span className="text-xs tabular-nums text-gray-400">
+                                  {item.count} {item.count === 1 ? "prospect" : "prospects"}
+                                </span>
+                              )}
+                              {!noEngagementYet && (
+                                <span className="text-xs font-semibold tabular-nums text-gray-900">
+                                  {item.total_score || 0}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-primary/10">
+                            <div
+                              className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out"
+                              style={{
+                                width: `${Math.max(
+                                  (noEngagementYet
+                                    ? (item.count || 0) / maxCount
+                                    : (item.total_score || 0) / maxScore) * 100,
+                                  1.5
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {noEngagementYet && (
+                      <p className="mt-2 text-center text-xs text-gray-400">
+                        No engagement yet — bars show prospects per position. Scores appear once emails are opened or clicked.
+                      </p>
+                    )}
+                  </>
+                );
+              })()
             ) : (
-              <div className="text-center p-4 text-gray-500 h-[240px] flex items-center justify-center">
-                No position data available
+              <div className="flex h-[240px] flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-center">
+                <p className="text-sm font-medium text-gray-600">No data yet</p>
+                <p className="text-sm text-gray-400">Position scores will appear here</p>
               </div>
             )}
           </CardContent>
         </Card>
-        <Card className="bg-gray-50">
+        <Card className="transition-shadow duration-200 hover:shadow-md">
           <CardContent className="pt-6 pl-5">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-semibold">Prospect Engagement Status</h3>
             </div>
             {isLoadingEngagementStatus ? (
-              <div className="flex justify-center items-center h-[240px]">
-                <div className="inline-block animate-spin mr-2">
-                  <svg className="h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </div>
-                <span className="text-gray-500">Loading engagement data...</span>
-              </div>
+              <ChartSkeleton layout="columns" bars={3} />
             ) : engagementStatus ? (
               <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart
                     data={[
-                      { name: 'Cold', value: engagementStatus.status_counts.cold || 0, color: '#0d9488' }, // Teal
-                      { name: 'Warm', value: engagementStatus.status_counts.warm || 0, color: '#0d9488' }, // Teal
-                      { name: 'Hot', value: engagementStatus.status_counts.hot || 0, color: '#0d9488' }, // Teal
+                      { name: 'Cold', value: engagementStatus.status_counts.cold || 0 },
+                      { name: 'Warm', value: engagementStatus.status_counts.warm || 0 },
+                      { name: 'Hot', value: engagementStatus.status_counts.hot || 0 },
                     ]}
                     margin={{ top: 5, right: 30, left: -15, bottom: 5 }}
                     barSize={60}
@@ -1067,29 +931,30 @@ export default function AnalyticsPage() {
                         boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
                       }}
                     />
-                    <Bar 
-                      dataKey="value" 
+                    <Bar
+                      dataKey="value"
                       radius={[4, 4, 0, 0]}
                       minPointSize={3}
                     >
-                      {[
-                        { name: 'Cold', value: engagementStatus.status_counts.cold || 0, color: 'rgba(13, 148, 136, 0.85)' },
-                        { name: 'Warm', value: engagementStatus.status_counts.warm || 0, color: 'rgba(13, 148, 136, 0.85)' },
-                        { name: 'Hot', value: engagementStatus.status_counts.hot || 0, color: 'rgba(13, 148, 136, 0.85)' },
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      {['Cold', 'Warm', 'Hot'].map((name) => (
+                        <Cell key={`cell-${name}`} fill="rgba(139, 92, 246, 0.85)" />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="text-center p-4 text-gray-500 h-[240px] flex items-center justify-center">
-                No engagement data found
+              <div className="flex h-[240px] flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-center">
+                <p className="text-sm font-medium text-gray-600">No data yet</p>
+                <p className="text-sm text-gray-400">Engagement status will appear here</p>
               </div>
             )}
-            <div className="text-center mt-2 text-sm text-gray-500">
-              Total: {engagementStatus?.status_counts.total || 0} prospects
+            <div className="mt-2 flex justify-center text-sm text-gray-500">
+              {isLoadingEngagementStatus ? (
+                <Skeleton className="h-4 w-32" />
+              ) : (
+                <span>Total: {engagementStatus?.status_counts.total || 0} prospects</span>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1127,29 +992,23 @@ export default function AnalyticsPage() {
             <h2 className="text-lg font-semibold mb-4">Email history</h2>
             <div className="space-y-4">
               {isLoadingMails ? (
-                <div className="text-center p-4">
-                  <div className="inline-block animate-spin mr-2">
-                    <svg className="h-6 w-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  </div>
-                  <span className="text-gray-500">Loading email history...</span>
-                </div>
+                <EmailHistorySkeleton cards={2} />
               ) : !selectedProspectId ? (
-                <div className="text-center p-4 text-gray-500">
-                  Select a prospect to view email history
+                <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed bg-white/50 px-4 py-12 text-center">
+                  <p className="text-sm font-medium text-gray-600">No prospect selected</p>
+                  <p className="text-sm text-gray-400">Select a prospect from the list to view their email history</p>
                 </div>
               ) : mailHistory.length === 0 ? (
-                <div className="text-center p-4 text-gray-500">
-                  No email history found for this prospect
+                <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed bg-white/50 px-4 py-12 text-center">
+                  <p className="text-sm font-medium text-gray-600">No emails yet</p>
+                  <p className="text-sm text-gray-400">No email history found for this prospect</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {mailHistory.map((mail) => (
                     <div key={mail.id} className="bg-white p-6 rounded-lg shadow-sm border">
                       <div className="flex justify-between items-start mb-3 border-b pb-3">
-                        <div className="font-medium text-lg">{mail.subject}</div>
+                        <div className="font-medium text-lg">{formatEmailSubject(mail.subject)}</div>
                         <div className="text-sm text-gray-500">
                           {formatLocalDateTime(mail.created_at)}
                         </div>
@@ -1178,7 +1037,7 @@ export default function AnalyticsPage() {
                       >
                         <style>{emailContentStyles}</style>
                         <div 
-                          dangerouslySetInnerHTML={{ __html: getDisplayContent(mail) }}
+                          dangerouslySetInnerHTML={{ __html: formatEmailHtml(getDisplayContent(mail)) }}
                           style={{
                             maxWidth: '100%'
                           }}

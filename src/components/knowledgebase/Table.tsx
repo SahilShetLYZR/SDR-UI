@@ -3,6 +3,7 @@ import {Trash2, Download, Search, Upload, FileText, FileDown, File} from "lucide
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KbDocument } from "@/types/knowledgeBase";
+import { TableRowsSkeleton } from "@/components/ui/skeletons";
 
 interface TableProps {
   documents: KbDocument[];
@@ -117,14 +118,7 @@ const Table: React.FC<TableProps> = ({
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-8 text-center text-sm text-gray-500"
-                >
-                  Loading...
-                </td>
-              </tr>
+              <TableRowsSkeleton rows={4} cols={5} />
             ) : filteredData.length === 0 ? (
               <tr>
                 <td

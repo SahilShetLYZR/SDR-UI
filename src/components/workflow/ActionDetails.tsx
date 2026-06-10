@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import debounce from "lodash/debounce";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { FormFieldsSkeleton } from "@/components/ui/skeletons";
 import InfoTag from "@/components/ui/info-tag";
 import ActionInput from "@/components/workflow/ActionInput";
 import ActionResult from "@/components/workflow/ActionResult";
@@ -424,11 +425,7 @@ export default function ActionDetails({
   // --- Render dynamic inputs (Unchanged logic) ---
   const renderPayloadInputs = () => {
     if (isLoadingSchema) {
-      return (
-        <div className="text-muted-foreground p-4">
-          Loading configuration fields...
-        </div>
-      );
+      return <FormFieldsSkeleton fields={3} />;
     }
     if (
       !payloadSchema ||

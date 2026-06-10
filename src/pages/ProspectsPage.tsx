@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TableRowsSkeleton } from "@/components/ui/skeletons";
 import BulkUploadModal from "@/components/prospects/BulkUploadModal";
 import AddProspectModal from "@/components/prospects/AddProspectModal";
 import EditProspectModal from "@/components/prospects/EditProspectModal";
@@ -772,14 +774,7 @@ const ProspectsPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {isLoading ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-6 py-4 text-center text-sm text-gray-500"
-                  >
-                    Loading prospects...
-                  </td>
-                </tr>
+                <TableRowsSkeleton rows={6} cols={8} cellClassName="px-6 py-4" />
               ) : prospects.length === 0 ? (
                 <tr>
                   <td
@@ -989,7 +984,7 @@ const ProspectsPage: React.FC = () => {
           
           <div className="text-sm text-gray-500">
             {isLoading ? (
-              "Loading..."
+              <Skeleton className="h-4 w-48" />
             ) : (
               `Page ${page} of ${totalPages} (${totalItems} total items)`
             )}
