@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "cd node_modules/lyzr-agent && npm run build --if-present || true"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

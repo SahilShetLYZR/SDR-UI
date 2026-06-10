@@ -1,30 +1,33 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  plugins: [
-    react(),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      // lyzr-agent is a GitHub dependency that ships no built dist/ (its package.json
-      // points at dist/index.js, which never gets built on install). Resolve the bare
-      // import straight to its TypeScript source so Vite/esbuild transpiles it.
-      "lyzr-agent": path.resolve(
-        __dirname,
-        "./node_modules/lyzr-agent/src/index.ts"
-      ),
+export default defineConfig(({ mode }) => {
+  const srcPath = path.resolve(__dirname, "./node_modules/lyzr-agent/src/index.ts");
+  const lyzrAgentAlias = fs.existsSync(srcPath) 
+    ? srcPath
+    : "lyzr-agent"; // Fallback to package.json main entry if src doesn't exist (CI environments)
+
+  return {
+    server: {
+      host: "::",
+      port: 8080,
     },
-  },
-  optimizeDeps: {
-    // Excluded from pre-bundling because it's aliased to raw TS source above.
-    exclude: ["lyzr-agent"],
-  },
-}));
+    plugins: [
+      react(),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+        // lyzr-agent: conditionally alias to source in dev, fall back to package.json main in CI
+        "lyzr-agent": lyzrAgentAlias,
+      },
+    },
+    optimizeDeps: {
+      // Only exclude from pre-bundling if we're using the TS source alias
+      exclude: fs.existsSync(srcPath) ? ["lyzr-agent"] : [],
+    },
+  };
+});
