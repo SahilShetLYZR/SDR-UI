@@ -4,17 +4,17 @@ const capabilities = [
   {
     n: "01",
     title: "Research",
-    copy: "Every prospect profiled with role, company, and buying signals before a single word is written.",
+    copy: "Every prospect researched across LinkedIn, news, and the web before a single word is written.",
   },
   {
     n: "02",
     title: "Outreach",
-    copy: "Emails drafted in your voice and sent at the right moment, not a template blast.",
+    copy: "Emails drafted per prospect from your own materials and sent on your schedule, not a template blast.",
   },
   {
     n: "03",
     title: "Follow-through",
-    copy: "Replies handled, objections answered, meetings landed on your calendar.",
+    copy: "Replies answered with full context and your booking link shared at the right time.",
   },
 ];
 
