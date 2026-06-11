@@ -26,6 +26,9 @@ jobs:
           VITE_API_BASE_URL: https://api-lyzr-sdr.bluesky-4d74138d.northcentralus.azurecontainerapps.io
           VITE_EMAIL_DOMAIN: security.davisulmer.us
           VITE_NEW_CLIENT: "false"
+          # Use the designed Studio Google-popup sign-in page instead of the
+          # lyzr-agent SDK's full-screen modal (which hides the login page).
+          VITE_LOCAL_STUDIO_AUTH: "true"
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_BEACH_06B44A310 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
