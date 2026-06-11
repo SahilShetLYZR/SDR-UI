@@ -22,12 +22,14 @@ export const isDevMode = (): boolean => {
 };
 
 /**
- * Real Lyzr Studio sign-in for local dev. Skips the lyzr-agent SDK (whose
- * only sign-in path is a studio.lyzr.ai redirect that can't return to
- * localhost) and authenticates directly via the Memberstack Google popup +
- * Pagos — a real Studio session with the user's own API key. Auth only;
- * no agent provisioning. See src/lib/studioAuth.ts.
- * @returns boolean indicating if local Studio auth is enabled
+ * Real Lyzr Studio sign-in without the lyzr-agent SDK (whose only sign-in
+ * path is a studio.lyzr.ai redirect that can't return to localhost, and whose
+ * modal covers the designed login page). Authenticates directly via the
+ * Memberstack Google popup + Pagos — a real Studio session with the user's
+ * own API key. Auth only; no agent provisioning. Used for local dev AND in
+ * the production build (set in the Azure deploy workflow) so the designed
+ * login page is shown. See src/lib/studioAuth.ts.
+ * @returns boolean indicating if Studio popup auth is enabled
  */
 export const isLocalStudioAuth = (): boolean => {
   return import.meta.env.VITE_LOCAL_STUDIO_AUTH === 'true';
