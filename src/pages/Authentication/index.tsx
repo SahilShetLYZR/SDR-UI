@@ -14,7 +14,7 @@ const capabilities = [
   {
     n: "03",
     title: "Follow-through",
-    copy: "Replies answered with full context and your booking link shared at the right time.",
+    copy: "Every reply detected, tracked, and answered with the full conversation as context.",
   },
 ];
 
@@ -52,7 +52,7 @@ export default () => {
             style={{ animationDelay: "240ms" }}
           >
             Jazon researches every prospect, writes outreach that sounds like
-            you, and books the meetings while your team sells.
+            you, and answers every reply while your team sells.
           </p>
         </div>
 

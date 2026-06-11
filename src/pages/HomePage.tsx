@@ -23,7 +23,7 @@ const quickLinks = [
 const steps = [
   { icon: Search, label: "Research", copy: "Profiles every prospect before writing." },
   { icon: Mail, label: "Outreach", copy: "Drafts and sends in your voice." },
-  { icon: ArrowUpRight, label: "Follow-through", copy: "Handles replies, books meetings." },
+  { icon: ArrowUpRight, label: "Follow-through", copy: "Detects replies, answers in context." },
 ];
 
 const HomePage: React.FC = () => {
@@ -61,7 +61,7 @@ const HomePage: React.FC = () => {
             style={{ animationDelay: "240ms" }}
           >
             Pick a campaign and Jazon takes it from there: research, outreach,
-            replies, and booking, around the clock.
+            and replies, around the clock.
           </p>
           <div className="auth-reveal mt-7" style={{ animationDelay: "360ms" }}>
             <Link
