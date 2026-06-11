@@ -214,7 +214,7 @@ export default function OtherSettings({ settings, campaignId, settingsId, onSett
         <h2 className="text-xl font-semibold">Other Settings</h2>
         <Button 
           onClick={handleSave} 
-          className="bg-purple-600 hover:bg-purple-700"
+          className="bg-purple-600 hover:bg-purple-500"
           disabled={isSaving}
         >
           {isSaving ? (
@@ -261,7 +261,7 @@ export default function OtherSettings({ settings, campaignId, settingsId, onSett
               type="button" 
               size="icon" 
               onClick={addEmail}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-purple-600 hover:bg-purple-500"
             >
               <Plus className="h-4 w-4" />
             </Button>

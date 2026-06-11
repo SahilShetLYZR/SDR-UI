@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import PageHeader from '@/components/layout/PageHeader';
 import { TableSkeleton } from '@/components/ui/skeletons';
 import { cn } from '@/lib/utils';
 import { adminService, AdminCampaignsResponse } from '@/services/adminService';
@@ -107,24 +108,21 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header - matching existing pages */}
-      <header className="border-b p-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-2">
-            Organization: {adminStatus?.organization_id} | Admin: {adminStatus?.email}
-          </p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <Button 
+      <PageHeader
+        eyebrow="Admin"
+        title="Admin dashboard"
+        description={`Organization: ${adminStatus?.organization_id} · Admin: ${adminStatus?.email}`}
+        actions={
+          <Button
             onClick={fetchAdminCampaigns}
             variant="outline"
+            className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       <div className="p-6 flex-1">
         {/* Stats Cards */}
@@ -135,7 +133,7 @@ const AdminDashboard: React.FC = () => {
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalCampaigns}</div>
+              <div className="font-display text-2xl font-medium tabular-nums">{totalCampaigns}</div>
               <p className="text-xs text-muted-foreground">
                 Across all users in organization
               </p>
@@ -148,7 +146,7 @@ const AdminDashboard: React.FC = () => {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-display text-2xl font-medium tabular-nums">
                 {campaigns.filter(c => c.is_active).length}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -163,7 +161,7 @@ const AdminDashboard: React.FC = () => {
               <Mail className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-display text-2xl font-medium tabular-nums">
                 {campaigns.reduce((sum, c) => sum + (c.total_mails_sent || 0), 0).toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -202,7 +200,8 @@ const AdminDashboard: React.FC = () => {
                 <p className="text-gray-500">No campaigns found.</p>
               </div>
             ) : (
-              <table className="w-full">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px]">
                 <thead>
                   <tr className="bg-gray-50 border-b">
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Campaign Name</th>
@@ -256,6 +255,7 @@ const AdminDashboard: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>

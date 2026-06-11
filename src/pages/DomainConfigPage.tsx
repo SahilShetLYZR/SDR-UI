@@ -6,11 +6,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader2, PlusCircle, AlertCircle, Trash2, Mail } from 'lucide-react';
 import AddDomainConfigDialog from '@/components/settings/AddDomainConfigDialog';
+import PageHeader from '@/components/layout/PageHeader';
 import { TableSkeleton } from '@/components/ui/skeletons';
 import { domainConfigService, DomainConfig } from '@/services/domainConfigService';
 import { useToast } from '@/components/ui/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import emptyStateImage from '@/assets/empty-state.svg';
 
 const DomainConfigPage: React.FC = () => {
   const [configs, setConfigs] = useState<DomainConfig[]>([]);
@@ -74,19 +74,24 @@ const DomainConfigPage: React.FC = () => {
 
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Email Configuration</h1>
-        <Button 
-          onClick={() => setIsModalOpen(true)} 
-          className="bg-purple-600 hover:bg-purple-700"
-          disabled={configs.length >= 10} // Disable if limit reached
-        >
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Add Email
-        </Button>
-      </div>
-      
+    <div className="flex h-full flex-col">
+      <PageHeader
+        eyebrow="Settings"
+        title="Email configuration"
+        description="The sending addresses Jazon writes from. Limited to 10 per workspace."
+        actions={
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25"
+            disabled={configs.length >= 10} // Disable if limit reached
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add Email
+          </Button>
+        }
+      />
+      <div className="flex-1 overflow-auto px-6 py-8 md:px-8">
+
       {configs.length >= 10 && (
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md text-amber-700 text-sm">
           You've reached the maximum limit of 10 email configurations.
@@ -105,24 +110,20 @@ const DomainConfigPage: React.FC = () => {
        )}
 
       {!isLoading && !error && configs.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-          <img 
-            src={emptyStateImage} 
-            alt="No emails configured" 
-            className="w-48 h-48 mb-6 opacity-80"
-            onError={(e) => {
-              // Fallback if the image fails to load
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-          <Mail className="h-16 w-16 text-gray-300 mb-4" />
-          <h3 className="text-xl font-medium text-gray-700 mb-2">Wow, such empty!</h3>
-          <p className="text-gray-500 mb-6 max-w-md">
-            You haven't added any email configurations yet. Add your first email to start sending campaigns.
+        <div className="mx-auto flex max-w-lg flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-white px-8 py-16 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-50 ring-1 ring-purple-100">
+            <Mail className="h-7 w-7 text-purple-600" strokeWidth={1.75} />
+          </span>
+          <h3 className="mt-5 font-display text-xl font-medium text-zinc-900">
+            Nothing to send <em className="text-purple-600">from, yet.</em>
+          </h3>
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-zinc-500">
+            You haven't added any email configurations yet. Add your first
+            email to start sending campaigns.
           </p>
-          <Button 
-            onClick={() => setIsModalOpen(true)} 
-            className="bg-purple-600 hover:bg-purple-700"
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            className="mt-6 bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25"
           >
             <PlusCircle className="h-4 w-4 mr-2" />
             Add Your First Email
@@ -167,7 +168,7 @@ const DomainConfigPage: React.FC = () => {
             </Table>
         </div>
        )}
-
+      </div>
 
       <AddDomainConfigDialog
         open={isModalOpen}

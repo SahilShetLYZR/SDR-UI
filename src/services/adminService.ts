@@ -18,7 +18,11 @@ export interface AdminCampaignsResponse {
 export const adminService = {
   checkAdminStatus: async (): Promise<AdminStatus> => {
     try {
-      const response = await api.get('/admin/check-admin');
+      // Background probe — a failure here means "not admin", never "logged
+      // out", so it must not trigger the global 401 session redirect.
+      const response = await api.get('/admin/check-admin', {
+        skipAuthRedirect: true,
+      } as any);
       return response.data;
     } catch (error) {
       console.error('Error checking admin status:', error);

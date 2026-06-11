@@ -237,7 +237,7 @@ export default function ScheduleSettings({ settings, campaignId, settingsId, onS
         <h2 className="text-xl font-semibold">Schedule Settings</h2>
         <Button 
           onClick={handleSave} 
-          className="bg-purple-600 hover:bg-purple-700"
+          className="bg-purple-600 hover:bg-purple-500"
           disabled={isSaving}
         >
           {isSaving ? (
@@ -319,7 +319,7 @@ export default function ScheduleSettings({ settings, campaignId, settingsId, onS
                 type="button"
                 variant={daysOfWeek.includes(day) ? "default" : "outline"}
                 onClick={() => toggleDay(day)}
-                className={daysOfWeek.includes(day) ? "bg-purple-600 hover:bg-purple-700" : ""}
+                className={daysOfWeek.includes(day) ? "bg-purple-600 hover:bg-purple-500" : ""}
               >
                 {day}
               </Button>

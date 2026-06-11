@@ -428,7 +428,7 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
         <h2 className="text-xl font-semibold">General Settings</h2>
         <Button 
           onClick={handleSave} 
-          className="bg-purple-600 hover:bg-purple-700"
+          className="bg-purple-600 hover:bg-purple-500"
           disabled={isSaving}
         >
           {isSaving ? (

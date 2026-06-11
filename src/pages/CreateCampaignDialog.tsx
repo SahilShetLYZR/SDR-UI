@@ -95,7 +95,7 @@ const CreateCampaignDialog: React.FC<CreateCampaignDialogProps> = ({
               </Button>
               <Button
                 onClick={handleCreateCampaign}
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-purple-600 hover:bg-purple-500"
                 disabled={isSubmitting}
               >
                  {isSubmitting ? (

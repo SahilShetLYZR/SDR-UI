@@ -25,23 +25,23 @@ const AvatarButton: React.FC<AvatarButtonProps> = ({ avatar, isExpanded, onDropd
         <button
           type="button"
           aria-label="Account menu"
-          className="flex w-full cursor-pointer items-center justify-between rounded-lg p-2 transition-colors duration-150 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="flex w-full cursor-pointer items-center justify-between rounded-lg p-2 transition-colors duration-150 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40"
         >
           <span className="flex min-w-0 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-purple-100">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-purple-100 ring-1 ring-purple-200">
               {avatar ? (
                 <img src={avatar} alt={email} className="h-full w-full object-cover" />
               ) : (
-                <span className="text-sm font-semibold text-purple-600">{initial}</span>
+                <span className="text-sm font-semibold text-purple-700">{initial}</span>
               )}
             </span>
             {isExpanded && (
-              <span className="truncate text-sm font-medium text-gray-800" title={email}>
+              <span className="truncate text-sm font-medium text-zinc-800" title={email}>
                 {email}
               </span>
             )}
           </span>
-          {isExpanded && <ChevronsUpDown className="size-3 shrink-0 opacity-50" />}
+          {isExpanded && <ChevronsUpDown className="size-3 shrink-0 text-zinc-400" />}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="right" align="end" sideOffset={8} className="w-48 p-1">

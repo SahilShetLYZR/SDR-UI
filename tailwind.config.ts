@@ -14,6 +14,7 @@ export default {
 	theme: {
 		fontFamily: {
 			sans: ['"DM Sans"', ...fontFamily.sans, ...fontFamily.serif],
+			display: ['Fraunces', 'Georgia', 'serif'],
 			arial: ['Arial', 'Helvetica', 'sans-serif'],
 		},
 		container: {
@@ -25,6 +26,11 @@ export default {
 		},
 		extend: {
 			colors: {
+				// Editorial dark surfaces ("ink") — sidebar, page-header bands, heroes.
+				ink: {
+					DEFAULT: '#2A2046',
+					light: '#382B5C',
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
