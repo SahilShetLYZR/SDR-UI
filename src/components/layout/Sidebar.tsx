@@ -48,9 +48,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, to, active, isExpanded }
 
 const BrandLockup: React.FC = () => (
   <div className="flex min-w-0 items-center gap-2.5">
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-ink to-purple-600 shadow-md shadow-purple-600/20">
-      <img alt="Jazon logo" src="/jazon-mark.svg" className="h-5 w-5" />
-    </span>
+    <img alt="Jazon logo" src="/Lyzr-Logo.svg" className="h-9 w-9 shrink-0" />
     <span className="flex min-w-0 flex-col">
       <span className="brand-wordmark whitespace-nowrap text-lg font-medium leading-normal tracking-tight text-zinc-900">
         Jazon
@@ -173,9 +171,7 @@ const Sidebar: React.FC = () => {
       >
         <div className="flex items-center p-4">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-ink to-purple-600 shadow-md shadow-purple-600/20">
-              <img alt="Jazon logo" src="/jazon-mark.svg" className="h-5 w-5" />
-            </span>
+            <img alt="Jazon logo" src="/Lyzr-Logo.svg" className="h-9 w-9 shrink-0" />
             {isSidebarOpen && (
               <span className="flex min-w-0 flex-col">
                 <span className="brand-wordmark whitespace-nowrap text-lg font-medium leading-normal tracking-tight text-zinc-900">

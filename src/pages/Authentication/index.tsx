@@ -31,9 +31,7 @@ export default () => {
         </div>
 
         <header className="auth-reveal relative z-10 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/10 backdrop-blur">
-            <img src="/jazon-mark.svg" alt="Lyzr" className="h-5 w-5" />
-          </span>
+          <img src="/Lyzr-Logo.svg" alt="Lyzr" className="h-9 w-9 rounded-xl ring-1 ring-white/20" />
           <span className="brand-wordmark text-lg font-medium tracking-tight">Jazon</span>
           <span className="ml-1 rounded-full border border-white/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-white/70">
             AI SDR by Lyzr
