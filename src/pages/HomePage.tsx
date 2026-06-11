@@ -21,7 +21,7 @@ const quickLinks = [
 ];
 
 const steps = [
-  { icon: Search, label: "Research", copy: "Profiles every prospect before writing." },
+  { icon: Search, label: "Research", copy: "LinkedIn, news, and web intel on demand." },
   { icon: Mail, label: "Outreach", copy: "Drafts and sends in your voice." },
   { icon: ArrowUpRight, label: "Follow-through", copy: "Detects replies, answers in context." },
 ];

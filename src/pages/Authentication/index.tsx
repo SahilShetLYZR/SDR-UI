@@ -4,7 +4,7 @@ const capabilities = [
   {
     n: "01",
     title: "Research",
-    copy: "Every prospect researched across LinkedIn, news, and the web before a single word is written.",
+    copy: "Pull LinkedIn, news, and website research into any email step before a single word is written.",
   },
   {
     n: "02",
@@ -51,8 +51,8 @@ export default () => {
             className="auth-reveal mt-6 max-w-md text-base leading-relaxed text-white/75"
             style={{ animationDelay: "240ms" }}
           >
-            Jazon researches every prospect, writes outreach that sounds like
-            you, and answers every reply while your team sells.
+            Jazon writes outreach that sounds like you, sends it on your
+            schedule, and answers every reply while your team sells.
           </p>
         </div>
 
