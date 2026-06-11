@@ -8,7 +8,7 @@ import {
   useRef,
 } from "react";
 import { USER_KEY, USER_TOKEN } from "@/lib/constants";
-import { isLocalStudioAuth } from "@/utils/env";
+import { isDevMode, isLocalStudioAuth } from "@/utils/env";
 import {
   buildStudioSession,
   getStudioToken,
@@ -134,8 +134,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // VITE_DEV_MODE: documented dummy-cred bypass (pair with backend
+  // DEV_MODE=true, which ignores the values — they just need to exist).
+  const signInDevUser = () => {
+    const devUser: UserType = {
+      email: "krish@lyzr.ai",
+      user_id: "dev-user",
+      organization_ids: ["dev-org"],
+      current_org_id: "dev-org",
+    };
+    localStorage.setItem(USER_KEY, "dev-api-key");
+    localStorage.setItem(USER_TOKEN, "dev-token");
+    localStorage.setItem("user_id", devUser.user_id);
+    localStorage.setItem("USER_DATA", JSON.stringify(devUser));
+    setIsAuthenticated(true);
+    setUserId(devUser.user_id);
+    setToken("dev-token");
+    setUser(devUser);
+    setHasJazonAccess(true);
+    setIsLoading(false);
+  };
+
   const checkAuth = async () => {
     if (isInitializing) return; // Prevent multiple simultaneous checks
+    if (isDevMode()) {
+      signInDevUser();
+      return;
+    }
     if (isLocalStudioAuth()) {
       await checkStudioLocalAuth();
       return;
@@ -236,26 +261,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Add a logout function that calls lyzr.logout + clears local data
+  // Add a logout function that ends the upstream session + clears local data
   const logout = async () => {
-    if (isLocalStudioAuth()) {
-      try {
-        await studioLogout();
-      } finally {
-        handleAuthFailure();
-        setIsLoading(false);
-      }
-      return;
-    }
     try {
-      const { default: lyzr } = await import("lyzr-agent");
-      await lyzr.logout(); // log out from the SDK
-      handleAuthFailure();
+      if (isLocalStudioAuth()) {
+        await studioLogout();
+      } else if (!isDevMode()) {
+        const { default: lyzr } = await import("lyzr-agent");
+        await lyzr.logout(); // log out from the SDK
+      }
     } catch (err) {
-      console.error("Failed to log out from lyzr:", err);
+      console.error("Failed to log out:", err);
+    } finally {
+      handleAuthFailure();
+      setIsLoading(false);
+      // Hard navigation to a fresh login screen. Re-initializing the SDK
+      // in place used to leave the app in a half-cleared "Redirecting..."
+      // dead end (SDK modal hides #root); a full reload guarantees clean
+      // module + auth state no matter which auth mode is active.
+      window.location.replace("/auth/login");
     }
-    // Clear local data
-    handleAuthFailure();
   };
 
   // Attempt to load stored auth info for initial display only.
@@ -264,6 +289,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedKey = localStorage.getItem(USER_KEY);
     const storedBearerToken = localStorage.getItem(USER_TOKEN);
     const storedUserData = localStorage.getItem("USER_DATA");
+
+    // Dev placeholder creds left over from a VITE_DEV_MODE session are
+    // worthless against the real backend — resurrecting them produces an
+    // endless stream of 401s (backend re-verifies "dev-api-key" against
+    // Pagos on every request). Purge instead of restoring.
+    if (!isDevMode() && (storedKey === "dev-api-key" || storedBearerToken === "dev-token")) {
+      handleAuthFailure();
+      return;
+    }
 
     if (storedKey && storedBearerToken && storedUserData && !isAuthenticated) {
       try {
@@ -286,6 +320,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const init = async () => {
       if (isInitializedRef.current) return; // Use persistent ref
+
+      // Local dev bypass: dummy session, no Studio round-trip at all.
+      if (isDevMode()) {
+        isInitializedRef.current = true;
+        signInDevUser();
+        return;
+      }
 
       // Local real-Studio auth: resume an existing Memberstack session if
       // one exists; otherwise land on /auth/login where the Google popup

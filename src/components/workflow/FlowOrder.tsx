@@ -41,7 +41,7 @@ export default function FlowOrder({
         <div className="px-4 py-3 border-b border-gray-100 bg-white">
           <button
             onClick={onEditWorkflow}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-lg p-3 transition-all duration-200 hover:shadow-md flex items-center justify-center gap-2 text-sm font-medium"
+            className="w-full bg-purple-600 hover:bg-purple-500 text-white rounded-lg p-3 transition-all duration-200 hover:shadow-md flex items-center justify-center gap-2 text-sm font-medium"
           >
             <svg 
               className="w-4 h-4" 

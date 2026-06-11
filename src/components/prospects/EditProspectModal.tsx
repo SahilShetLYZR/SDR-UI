@@ -184,7 +184,7 @@ const EditProspectModal: React.FC<EditProspectModalProps> = ({ onClose, onSucces
             <Button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-purple-600 hover:bg-purple-500"
             >
               {isLoading ? "Saving..." : "Save Changes"}
             </Button>

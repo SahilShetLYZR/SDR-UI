@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { campaignSettingsService } from '@/services/campaignSettingsService';
 import CreateCampaignDialog from '@/pages/CreateCampaignDialog';
 import FullCloneCampaignDialog from '@/components/campaign/FullCloneCampaignDialog';
+import PageHeader from '@/components/layout/PageHeader';
 import {
   Tooltip,
   TooltipTrigger,
@@ -67,19 +68,20 @@ const CampaignPage: React.FC = () => {
     try {
       await campaignService.copyCampaign(campaignId);
       await fetchCampaigns();
-      setCopiedCampaignId("");
       toast({
         title: 'Campaign duplicated',
         description: 'The campaign has been successfully duplicated.',
       });
     } catch (err) {
       console.log(err);
-      setCopiedCampaignId("");
       toast({
         title: 'Error',
         description: 'Failed to duplicate campaign',
         variant: 'destructive',
       });
+    } finally {
+      setCopiedCampaignId("");
+      setIsLoading(false);
     }
   };
 
@@ -179,15 +181,17 @@ const CampaignPage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b p-5 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold">Campaigns</h1>
-        </div>
-        <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-700">
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Create New
-        </Button>
-      </header>
+      <PageHeader
+        eyebrow="Workspace"
+        title="Campaigns"
+        description="Every outreach motion Jazon is running for you, in one place."
+        actions={
+          <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25">
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Create New
+          </Button>
+        }
+      />
 
       <div className="p-6 flex-1">
         {isLoading ? (
@@ -219,23 +223,24 @@ const CampaignPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg border overflow-hidden">
-              <table className="w-full">
+            <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px]">
                 <thead>
-                  <tr className="bg-gray-50 border-b">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Campaign Name</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Creation Date</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Total Prospects</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Total Mails Sent</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Status</th>
+                  <tr className="bg-zinc-50/80 border-b border-zinc-200">
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Campaign Name</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Creation Date</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Total Prospects</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Total Mails Sent</th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Status</th>
                     <th className="px-4 py-3 w-20"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredCampaigns.map((campaign) => (
-                    <tr key={campaign._id} className="border-b">
+                    <tr key={campaign._id} className="border-b border-zinc-100 transition-colors hover:bg-zinc-50/60">
                       <td className="px-4 py-3 text-sm">
-                        <div className="flex items-center">
+                        <div className="flex items-center font-medium text-zinc-800">
                           {campaign.name}
                           <Button
                             variant="ghost"
@@ -252,10 +257,10 @@ const CampaignPage: React.FC = () => {
                       <td className="px-4 py-3 text-sm">{campaign.total_mails_sent || 0}</td>
                       <td className="px-4 py-3 text-sm">
                         <Badge className={cn(
-                          "rounded-full px-2 py-0.5 text-xs font-medium",
+                          "rounded-full px-2.5 py-0.5 text-xs font-medium",
                           campaign.is_active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                            : "bg-zinc-100 text-zinc-500 hover:bg-zinc-100"
                         )}>
                           {campaign.is_active ? 'Active' : 'Inactive'}
                         </Badge>
@@ -305,6 +310,7 @@ const CampaignPage: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         ) : (
@@ -312,10 +318,10 @@ const CampaignPage: React.FC = () => {
             <div className="mb-5">
               <img src="/nocampaigns.svg" alt="No campaigns" className="w-60 h-60 object-contain" />
             </div>
-            <h2 className="text-2xl font-semibold mb-2">No campaigns here yet!</h2>
-            <p className="text-muted-foreground mb-6">Create a new campaign to get started.</p>
+            <h2 className="font-display text-2xl font-medium mb-2 text-zinc-900">No campaigns <em className="text-purple-600">yet.</em></h2>
+            <p className="text-zinc-500 mb-6">Create your first campaign and put your pipeline on autopilot.</p>
             <div className="space-y-2">
-              <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-700">
+              <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25">
                 <PlusIcon className="h-4 w-4 mr-2" />
                 Create new
               </Button>

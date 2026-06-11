@@ -54,7 +54,7 @@ function MetricCard({ icon, label, value, sub, loading }: MetricCardProps) {
           {loading ? (
             <Skeleton className="h-8 w-20" />
           ) : (
-            <span className="animate-fade-in text-2xl font-semibold tabular-nums tracking-tight">
+            <span className="animate-fade-in font-display text-2xl font-medium tabular-nums tracking-tight">
               {value}
             </span>
           )}
@@ -604,7 +604,10 @@ export default function AnalyticsPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Account overview</h1>
+        <div>
+          <p className="font-display text-xs italic text-purple-600">Analytics</p>
+          <h1 className="font-display text-2xl font-medium tracking-tight text-zinc-900">Account overview</h1>
+        </div>
         <div className="flex items-center gap-4">
           <Select value={selectedAction} onValueChange={setSelectedAction}>
             <SelectTrigger className="w-[180px]">

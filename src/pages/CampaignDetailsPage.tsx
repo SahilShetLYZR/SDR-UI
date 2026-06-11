@@ -10,6 +10,7 @@ import AnalyticsPage from './Analytics';
 import { campaignService, ApiCampaign } from '@/services/campaignService';
 import { campaignSettingsService, CampaignSettings } from '@/services/campaignSettingsService';
 import CreateCampaignDialog from '@/pages/CreateCampaignDialog';
+import PageHeader from '@/components/layout/PageHeader';
 import { useToast } from '@/components/ui/use-toast';
 
 const CampaignDetailsPage: React.FC = () => {
@@ -155,33 +156,42 @@ const CampaignDetailsPage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="border-b bg-white">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center">
-            <Link to="/campaign" className="mr-2 text-gray-500 hover:text-gray-700">
-              <ChevronLeft className="h-5 w-5" />
-            </Link>
-            <h1 className="text-2xl font-semibold">
-              {campaign.name}
-              <Badge
-                className={cn(
-                  "ml-3 rounded-full px-2 py-0.5 text-xs font-medium",
-                  campaign.is_active
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
-                )}
-              >
-                {campaign.is_active ? 'Active' : 'Inactive'}
-              </Badge>
-            </h1>
-          </div>
-          <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-700">
+      <PageHeader
+        eyebrow="Campaign"
+        leading={
+          <Link
+            to="/campaign"
+            aria-label="Back to campaigns"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Link>
+        }
+        title={
+          <span className="flex items-center gap-3">
+            <span className="truncate">{campaign.name}</span>
+            <Badge
+              className={cn(
+                "rounded-full px-2.5 py-0.5 text-xs font-medium font-sans not-italic tracking-normal",
+                campaign.is_active
+                  ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30 hover:bg-emerald-400/15"
+                  : "bg-white/10 text-white/60 ring-1 ring-white/15 hover:bg-white/10"
+              )}
+            >
+              {campaign.is_active ? 'Active' : 'Inactive'}
+            </Badge>
+          </span>
+        }
+        actions={
+          <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25">
             <PlusIcon className="h-4 w-4 mr-2" />
             Create New
           </Button>
-        </div>
+        }
+      />
+      <div className="border-b bg-white">
         <CampaignTabs campaignId={campaign._id} isActive={campaign.is_active} />
-      </header>
+      </div>
 
       <div className="flex-1 overflow-auto">
         {isAnalyticsRoute ? (

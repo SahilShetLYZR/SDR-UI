@@ -242,7 +242,7 @@ export default function MaterialSettings({ settings, campaignId, settingsId, onS
         <h2 className="text-xl font-semibold">Materials Settings</h2>
         <Button 
           onClick={handleSave} 
-          className="bg-purple-600 hover:bg-purple-700"
+          className="bg-purple-600 hover:bg-purple-500"
           disabled={isSaving}
         >
           {isSaving ? (
@@ -321,7 +321,7 @@ export default function MaterialSettings({ settings, campaignId, settingsId, onS
               type="button" 
               size="icon" 
               onClick={addPainPoint}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-purple-600 hover:bg-purple-500"
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -362,7 +362,7 @@ export default function MaterialSettings({ settings, campaignId, settingsId, onS
               type="button" 
               size="icon" 
               onClick={addCaseStudy}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-purple-600 hover:bg-purple-500"
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -400,7 +400,7 @@ export default function MaterialSettings({ settings, campaignId, settingsId, onS
               type="button" 
               size="icon" 
               onClick={addTestimonial}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-purple-600 hover:bg-purple-500"
             >
               <Plus className="h-4 w-4" />
             </Button>

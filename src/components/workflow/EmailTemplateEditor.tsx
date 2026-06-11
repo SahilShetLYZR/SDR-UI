@@ -844,7 +844,7 @@ export default function EmailTemplateEditor({
                 onClick={handleSendMessage} 
                 disabled={!inputValue.trim() || updateTemplateMutation.isPending || diffState.isAnimating}
                 size="sm"
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                className="bg-purple-600 hover:bg-purple-500 text-white"
               >
                 <Send className="h-4 w-4" />
               </Button>

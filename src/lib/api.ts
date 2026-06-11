@@ -9,8 +9,10 @@ export const DEFAULT_ERROR_MESSAGE = "Something went wrong. Please try again lat
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
 // Create an Axios instance without static headers.
+// 60s timeout: long enough for AI generation/uploads, short enough that a
+// hung request settles its loading state instead of spinning for an hour.
 const api = axios.create({
-  timeout: 4000 * 1000,
+  timeout: 60 * 1000,
   baseURL: BASE_URL,
 });
 
@@ -36,6 +38,11 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     const e: any = error?.response?.data;
     switch (error?.response?.status) {
+      case 403:
+        // Reject (below) instead of swallowing: returning null resolved the
+        // promise with no response, crashing callers and stranding loaders.
+        toast.error(e?.detail ?? "You don't have permission to do that.");
+        break;
       case 400:
       case 422:
       case 500:
@@ -50,16 +57,29 @@ api.interceptors.response.use(
           toast.error(e?.detail ?? DEFAULT_ERROR_MESSAGE);
         }
         break;
-      case 401:
-        console.log(e);
+      case 401: {
+        // Background probes (e.g. the admin check) opt out: a 401 from an
+        // optional endpoint must not end the whole session.
+        if ((error.config as any)?.skipAuthRedirect) break;
+        // Loop guard: if we already redirected for a 401 in the last 10s,
+        // the session is being rebuilt — redirecting again just cycles the
+        // app through login forever (the "continuous loading" bug).
+        const lastRedirect = Number(sessionStorage.getItem("jazon_401_at") ?? 0);
+        if (Date.now() - lastRedirect < 10_000) break;
+        sessionStorage.setItem("jazon_401_at", String(Date.now()));
         toast.error(
           e?.detail ??
           "You're being logged out because your session has expired. Please re-login."
         );
         localStorage.removeItem(USER_TOKEN);
         localStorage.removeItem(USER_KEY);
-        window.location.reload();
+        localStorage.removeItem("user_id");
+        localStorage.removeItem("USER_DATA");
+        if (!window.location.pathname.startsWith("/auth/login")) {
+          window.location.replace("/auth/login");
+        }
         break;
+      }
       default:
         toast.error(DEFAULT_ERROR_MESSAGE);
         break;

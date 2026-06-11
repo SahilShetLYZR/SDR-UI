@@ -132,7 +132,7 @@ const AddDomainConfigDialog: React.FC<AddDomainConfigDialogProps> = ({
           </Button>
           <Button
             onClick={handleCreate}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-purple-600 hover:bg-purple-500"
             disabled={isSubmitting}
           >
             {isSubmitting ? (

@@ -132,7 +132,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ onClose, onSuccess })
           </Button>
           <Button
             onClick={handleUpload}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-purple-600 hover:bg-purple-500"
             disabled={!file || isUploading}
           >
             {isUploading ? 'Uploading...' : 'Upload Prospects'}

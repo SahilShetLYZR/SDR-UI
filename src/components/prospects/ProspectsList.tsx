@@ -183,7 +183,7 @@ export const ProspectsList: React.FC<ProspectsListProps> = ({
           onClick={() => handleQuickFilter('meeting_clicked', true)}
           className={cn(
             "text-xs h-7",
-            filters.meeting_clicked === true && "bg-purple-600 hover:bg-purple-700"
+            filters.meeting_clicked === true && "bg-purple-600 hover:bg-purple-500"
           )}
         >
           Meeting Clicks

@@ -11,3 +11,12 @@ createRoot(document.getElementById("root")!).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// PWA: production only — a service worker in dev fights Vite's module server.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((err) => {
+      console.warn("Service worker registration failed:", err);
+    });
+  });
+}

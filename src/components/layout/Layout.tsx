@@ -9,11 +9,11 @@ const Layout: React.FC = () => {
   const { isExpanded } = useSidebarStore();
   
   return (
-    <div className="flex h-screen w-full overflow-hidden">
+    <div className="flex h-dvh w-full flex-col overflow-hidden md:flex-row">
       <Sidebar />
       <main className={cn(
-        "flex-1 overflow-auto transition-all duration-300",
-        isExpanded ? "w-[calc(100%-220px)]" : "w-[calc(100%-60px)]"
+        "flex-1 overflow-auto bg-zinc-50/60 transition-all duration-300",
+        isExpanded ? "md:w-[calc(100%-220px)]" : "md:w-[calc(100%-60px)]"
       )}>
         <Outlet />
       </main>
