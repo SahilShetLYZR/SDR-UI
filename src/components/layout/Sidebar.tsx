@@ -26,12 +26,12 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, to, active, isExpanded }
         "relative flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40",
         active
-          ? "bg-purple-50 text-purple-700"
+          ? "bg-[#F1EBFF] text-[#8B5CF6]"
           : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
       )}
     >
       {active && (
-        <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-purple-600" />
+        <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[#8B5CF6]" />
       )}
       <span className="flex min-w-[20px] justify-center">{icon}</span>
       <span
@@ -115,7 +115,7 @@ const Sidebar: React.FC = () => {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="flex h-14 shrink-0 items-center gap-1.5 border-b border-zinc-200 bg-white px-3 md:hidden">
+      <div className="flex h-14 shrink-0 items-center gap-1.5 border-b border-[#E9E9EF] bg-[#FAFAFC] px-3 md:hidden">
         <button
           type="button"
           aria-label="Open menu"
@@ -135,8 +135,8 @@ const Sidebar: React.FC = () => {
             onClick={() => setIsMobileOpen(false)}
             aria-hidden
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-200 p-4">
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-[#FAFAFC] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#E9E9EF] p-4">
               <BrandLockup />
               <button
                 type="button"
@@ -153,7 +153,7 @@ const Sidebar: React.FC = () => {
             >
               {navItems(true)}
             </nav>
-            <div className="mt-auto border-t border-zinc-200 px-2 py-3">
+            <div className="mt-auto border-t border-[#E9E9EF] px-2 py-3">
               <AvatarButton isExpanded onDropdownOpenChange={() => {}} />
             </div>
           </div>
@@ -165,7 +165,7 @@ const Sidebar: React.FC = () => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => !isDropdownOpen && setIsHovered(false)}
         className={cn(
-          "relative hidden h-screen flex-col border-r border-zinc-200 bg-white transition-all duration-300 ease-in-out md:flex",
+          "relative hidden h-screen flex-col border-r border-[#E9E9EF] bg-[#FAFAFC] transition-all duration-300 ease-in-out md:flex",
           isSidebarOpen ? "w-[220px]" : "w-[70px]"
         )}
       >
@@ -188,7 +188,7 @@ const Sidebar: React.FC = () => {
         <button
           type="button"
           aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-          className="absolute -right-3 top-1/2 z-20 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-all hover:text-zinc-900"
+          className="absolute -right-3 top-1/2 z-20 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-[#E9E9EF] bg-white text-zinc-500 shadow-sm transition-all hover:text-zinc-900"
           onClick={toggleSidebar}
         >
           {isSidebarOpen ? (
@@ -200,7 +200,7 @@ const Sidebar: React.FC = () => {
 
         <nav className="flex-1 space-y-1 px-2 py-4">{navItems(isSidebarOpen)}</nav>
 
-        <div className="mt-auto border-t border-zinc-200 px-2 py-3">
+        <div className="mt-auto border-t border-[#E9E9EF] px-2 py-3">
           <AvatarButton
             isExpanded={isSidebarOpen}
             onDropdownOpenChange={setIsDropdownOpen}
