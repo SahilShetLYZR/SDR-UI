@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import {Trash2, Download, Search, Upload, FileText, FileDown, File} from "lucide-react";
+import {Trash2, Download, Search, Plus, FileText, FileDown, File} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KbDocument } from "@/types/knowledgeBase";
@@ -91,8 +91,8 @@ const Table: React.FC<TableProps> = ({
             Export
           </Button>
           <Button variant="outline" className="ml-2" onClick={onUpload}>
-            <Upload size={16} className="mr-1" />
-            Upload
+            <Plus size={16} className="mr-1" />
+            New
           </Button>
         </div>
       </div>

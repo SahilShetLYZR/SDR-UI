@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { KnowledgeBaseService } from '@/services/knowledgeBaseService';
 import { X, TriangleAlert, Upload, FileText, Globe } from 'lucide-react';
 import { campaignService } from '@/services/campaignService';
+import { normalizeUrl, URL_ERROR_MESSAGE } from '@/lib/url';
 
 interface UploadModalProps {
   onClose: () => void;
@@ -103,13 +104,22 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess, campaignI
       return;
     }
 
-    // Validate URL format
-    try {
-      new URL(formData.url);
-    } catch (e) {
+    // The backend requires a name to identify the website in the KB.
+    if (!formData.websiteName.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter a valid URL (e.g., https://example.com)",
+        title: "Name needed",
+        description: "Give this website a name so you can find it in your knowledge base later.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Accept scheme-less input ("example.com") — normalize to https://.
+    const normalizedUrl = normalizeUrl(formData.url);
+    if (!normalizedUrl) {
+      toast({
+        title: "Check the address",
+        description: URL_ERROR_MESSAGE,
         variant: "destructive"
       });
       return;
@@ -120,19 +130,21 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess, campaignI
       await KnowledgeBaseService.addWebsite({
         kb_id: kbId,
         source: "webpage",
-        urls: [formData.url],
-        name: formData.websiteName || undefined // Only include name if it's not empty
+        urls: [normalizedUrl],
+        name: formData.websiteName.trim()
       });
       toast({
-        title: "Success",
-        description: "Website added successfully",
+        title: "Website added",
+        description: "We're reading it now — content will appear in your knowledge base shortly.",
       });
       onSuccess();
     } catch (error) {
       console.error('Error adding website:', error);
       toast({
-        title: "Error",
-        description: "Failed to add website",
+        title: "Couldn't add website",
+        description: friendlyError(error, {
+          fallback: "We couldn't add that website. Please try again.",
+        }),
         variant: "destructive"
       });
     } finally {
@@ -206,7 +218,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess, campaignI
           <X size={20} />
         </button>
 
-        <h2 className="text-lg font-semibold mb-4">Upload Knowledge Base</h2>
+        <h2 className="text-lg font-semibold mb-4">Add to Knowledge Base</h2>
 
         <div className="bg-orange-50 border border-orange-200 text-sm rounded-lg px-4 py-3 mb-6 flex flex-row">
           <TriangleAlert className="w-5 h-5 mr-2 text-orange-400 font-semibold"/>
@@ -255,11 +267,15 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess, campaignI
           {activeTab === 'Website' && (
             <div className="space-y-4">
               <div>
-                <Label>Website Name</Label>
+                <Label>
+                  Website Name <span className="text-red-500" aria-hidden>*</span>
+                </Label>
                 <Input
                   value={formData.websiteName}
                   onChange={(e) => setFormData(prev => ({ ...prev, websiteName: e.target.value }))}
-                  placeholder="Enter a name for this website (optional)"
+                  placeholder="e.g. Company blog"
+                  required
+                  aria-required="true"
                 />
               </div>
               <div>
@@ -326,7 +342,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess, campaignI
               disabled={isLoading || !kbId}
               className="bg-purple-600 hover:bg-purple-500"
             >
-              {isLoading ? "Uploading..." : "Upload"}
+              {isLoading ? "Adding..." : "Add"}
             </Button>
           </div>
         </div>

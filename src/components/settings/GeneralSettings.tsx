@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { campaignSettingsService } from "@/services/campaignSettingsService"
 import { Loader2, Mail, Upload, Link } from "lucide-react"
 import { domainConfigService, DomainConfig } from "@/services/domainConfigService"
+import { normalizeUrl, URL_ERROR_MESSAGE } from "@/lib/url"
 import {
   Select,
   SelectContent,
@@ -173,12 +174,8 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
   
   // Validate URL format
   const validateUrl = (url: string): string => {
-    try {
-      new URL(url);
-      return '';
-    } catch (e) {
-      return 'Please enter a valid URL';
-    }
+    if (!url) return '';
+    return normalizeUrl(url) ? '' : URL_ERROR_MESSAGE;
   };
 
   // Validate email list (comma-separated emails)
@@ -374,9 +371,11 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
           ...settingsData.agent_address, 
           field_value: agentAddress 
         },
-        signature_image: { 
-          ...(settingsData.signature_image || { field_name: "signature_image", field_type: "single_field", field_options: null }), 
-          field_value: agentSignature 
+        signature_image: {
+          ...(settingsData.signature_image || { field_name: "signature_image", field_type: "single_field", field_options: null }),
+          field_value: agentSignature && !agentSignature.startsWith('data:image/')
+            ? normalizeUrl(agentSignature) ?? agentSignature
+            : agentSignature
         },
         campaign_email: {
           ...(settingsData.campaign_email || { field_name: "campaign_email", field_type: "single_field", field_options: null }),
@@ -588,11 +587,13 @@ export default function GeneralSettings({ settings, campaignId, settingsId, onSe
           {/* URL Input */}
           {signatureUploadMode === 'url' && (
             <div className="space-y-1">
-              <Input 
+              <Input
                 value={agentSignature}
                 onChange={(e) => setAgentSignature(e.target.value)}
-                placeholder="Enter signature image URL"
-                type="url"
+                onBlur={() => setAgentSignature((prev) =>
+                  prev.startsWith('data:image/') ? prev : normalizeUrl(prev) ?? prev
+                )}
+                placeholder="example.com/signature.png"
                 className={errors.agentSignature ? "border-red-500" : ""}
               />
               {errors.agentSignature && (
