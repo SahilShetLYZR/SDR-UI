@@ -36,26 +36,26 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    const e: any = error?.response?.data;
     switch (error?.response?.status) {
       case 403:
         // Reject (below) instead of swallowing: returning null resolved the
         // promise with no response, crashing callers and stranding loaders.
-        toast.error(e?.detail ?? "You don't have permission to do that.");
+        toast.error("You don't have permission to do that.");
         break;
       case 400:
       case 422:
+        // Form-level failures are the calling component's job to explain
+        // (with field context the global handler doesn't have). No global
+        // toast — and never the raw backend detail / pydantic "Field
+        // required" strings.
+        break;
+      case 404:
+        toast.error("We couldn't find what you were looking for.");
+        break;
       case 500:
       case 503:
       case 504:
-      case 404:
-        if (Array.isArray(e.detail)) {
-          e.detail.forEach((obj: any) => {
-            toast.error(obj.msg ?? DEFAULT_ERROR_MESSAGE);
-          });
-        } else {
-          toast.error(e?.detail ?? DEFAULT_ERROR_MESSAGE);
-        }
+        toast.error("Something went wrong on our end. Please try again in a moment.");
         break;
       case 401: {
         // Background probes (e.g. the admin check) opt out: a 401 from an
@@ -68,7 +68,6 @@ api.interceptors.response.use(
         if (Date.now() - lastRedirect < 10_000) break;
         sessionStorage.setItem("jazon_401_at", String(Date.now()));
         toast.error(
-          e?.detail ??
           "You're being logged out because your session has expired. Please re-login."
         );
         localStorage.removeItem(USER_TOKEN);

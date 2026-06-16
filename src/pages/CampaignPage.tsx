@@ -186,10 +186,15 @@ const CampaignPage: React.FC = () => {
         title="Campaigns"
         description="Every outreach motion Jazon is running for you, in one place."
         actions={
-          <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25">
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Create New
-          </Button>
+          // Header CTA only once campaigns exist: while loading nothing shows
+          // (no appear-then-vanish flicker), and on an empty workspace the
+          // empty state below owns the single primary action.
+          campaigns.length > 0 ? (
+            <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25">
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Create New
+            </Button>
+          ) : undefined
         }
       />
 
@@ -320,17 +325,10 @@ const CampaignPage: React.FC = () => {
             </div>
             <h2 className="font-display text-2xl font-medium mb-2 text-zinc-900">No campaigns <em className="text-purple-600">yet.</em></h2>
             <p className="text-zinc-500 mb-6">Create your first campaign and put your pipeline on autopilot.</p>
-            <div className="space-y-2">
-              <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25">
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Create new
-              </Button>
-              <div>
-                <Button variant="outline" className="mt-4">
-                  Skip
-                </Button>
-              </div>
-            </div>
+            <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25">
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Create new
+            </Button>
           </div>
         )}
       </div>

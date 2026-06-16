@@ -6,6 +6,7 @@ import { Plus, X, Loader2, Trash2 } from "lucide-react"
 import { MaterialsSettings as MaterialsSettingsType } from "@/services/campaignSettingsService"
 import { useToast } from "@/components/ui/use-toast"
 import { campaignSettingsService } from "@/services/campaignSettingsService"
+import { normalizeUrl, URL_ERROR_MESSAGE } from "@/lib/url"
 
 interface MaterialSettingsProps {
   settings?: MaterialsSettingsType;
@@ -84,12 +85,7 @@ export default function MaterialSettings({ settings, campaignId, settingsId, onS
   
   const validateUrl = (url: string): string => {
     if (!url) return '';
-    try {
-      new URL(url);
-      return '';
-    } catch (e) {
-      return 'Please enter a valid URL (e.g., https://example.com)';
-    }
+    return normalizeUrl(url) ? '' : URL_ERROR_MESSAGE;
   };
   
   // Validate all fields
@@ -184,9 +180,9 @@ export default function MaterialSettings({ settings, campaignId, settingsId, onS
           ...settingsData.seller, 
           field_value: sellerName 
         },
-        meeting_booking_link: { 
-          ...settingsData.meeting_booking_link, 
-          field_value: meetingLink 
+        meeting_booking_link: {
+          ...settingsData.meeting_booking_link,
+          field_value: meetingLink ? normalizeUrl(meetingLink) ?? meetingLink : meetingLink
         },
         pain_points: { 
           ...settingsData.pain_points, 
@@ -200,9 +196,9 @@ export default function MaterialSettings({ settings, campaignId, settingsId, onS
           ...settingsData.testimonials, 
           field_value: testimonials 
         },
-        website_url: { 
-          ...settingsData.website_url, 
-          field_value: websiteUrl 
+        website_url: {
+          ...settingsData.website_url,
+          field_value: websiteUrl ? normalizeUrl(websiteUrl) ?? websiteUrl : websiteUrl
         }
       };
       
@@ -278,10 +274,11 @@ export default function MaterialSettings({ settings, campaignId, settingsId, onS
           <p className="text-sm text-muted-foreground">Link for booking meetings</p>
         </div>
         <div className="space-y-1">
-          <Input 
+          <Input
             value={meetingLink}
             onChange={(e) => setMeetingLink(e.target.value)}
-            placeholder="Enter meeting booking link"
+            onBlur={() => setMeetingLink((prev) => normalizeUrl(prev) ?? prev)}
+            placeholder="example.com/book-a-call"
             className={errors.meetingLink ? "border-red-500" : ""}
           />
           {errors.meetingLink && (
@@ -294,10 +291,11 @@ export default function MaterialSettings({ settings, campaignId, settingsId, onS
           <p className="text-sm text-muted-foreground">URL of your website</p>
         </div>
         <div className="space-y-1">
-          <Input 
+          <Input
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
-            placeholder="Enter website URL"
+            onBlur={() => setWebsiteUrl((prev) => normalizeUrl(prev) ?? prev)}
+            placeholder="example.com"
             className={errors.websiteUrl ? "border-red-500" : ""}
           />
           {errors.websiteUrl && (

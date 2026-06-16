@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { domainConfigService, CreateDomainConfigRequest } from '@/services/domainConfigService';
+import { friendlyError } from '@/lib/friendlyError';
 
 interface AddDomainConfigDialogProps {
   open: boolean;
@@ -83,9 +84,12 @@ const AddDomainConfigDialog: React.FC<AddDomainConfigDialogProps> = ({
       onSuccess(); // Refresh the list in the parent component
       closeModal();
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || 'Failed to add email configuration.';
       console.error("Create config error:", error);
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toast({
+        title: "Couldn't add email",
+        description: friendlyError(error, { fallback: `We couldn't add ${emailId}. Please try again.` }),
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }

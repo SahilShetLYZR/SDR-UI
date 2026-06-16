@@ -9,6 +9,7 @@ import AddDomainConfigDialog from '@/components/settings/AddDomainConfigDialog';
 import PageHeader from '@/components/layout/PageHeader';
 import { TableSkeleton } from '@/components/ui/skeletons';
 import { domainConfigService, DomainConfig } from '@/services/domainConfigService';
+import { friendlyError } from '@/lib/friendlyError';
 import { useToast } from '@/components/ui/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -33,9 +34,11 @@ const DomainConfigPage: React.FC = () => {
       setConfigs(data);
     } catch (err: any) {
       console.error("Fetch config error:", err);
-      const errorMessage = err?.response?.data?.detail || 'Failed to fetch email configurations.';
+      const errorMessage = friendlyError(err, {
+        fallback: "We couldn't load your sender emails. Please try again.",
+      });
       setError(errorMessage);
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toast({ title: "Couldn't load emails", description: errorMessage, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -63,8 +66,14 @@ const DomainConfigPage: React.FC = () => {
       toast({ title: 'Success', description: 'Email configuration deleted successfully.' });
       fetchConfigs(); // Refresh the list after deletion
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.detail || 'Failed to delete email configuration.';
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      console.error("Delete config error:", err);
+      toast({
+        title: "Couldn't delete email",
+        description: friendlyError(err, {
+          fallback: "We couldn't delete that email. Please try again.",
+        }),
+        variant: 'destructive',
+      });
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
@@ -80,14 +89,19 @@ const DomainConfigPage: React.FC = () => {
         title="Email configuration"
         description="The sending addresses Jazon writes from. Limited to 10 per workspace."
         actions={
-          <Button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25"
-            disabled={configs.length >= 10} // Disable if limit reached
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add Email
-          </Button>
+          // Header CTA only once configs exist: while loading nothing shows
+          // (no appear-then-vanish flicker), and on an empty list the empty
+          // state below owns the single primary action.
+          configs.length > 0 ? (
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25"
+              disabled={configs.length >= 10} // Disable if limit reached
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add Email
+            </Button>
+          ) : undefined
         }
       />
       <div className="flex-1 overflow-auto px-6 py-8 md:px-8">
@@ -103,9 +117,14 @@ const DomainConfigPage: React.FC = () => {
       )}
 
       {error && !isLoading && (
-         <div className="flex items-center justify-center py-10 text-red-600 bg-red-100 border border-red-300 rounded-md p-6 my-6">
-           <AlertCircle className="h-5 w-5 mr-3" />
-           <span>Error loading configurations: {error}</span>
+         <div className="flex flex-col items-center justify-center gap-4 rounded-md border border-red-200 bg-red-50 p-6 my-6 text-center">
+           <div className="flex items-center text-red-600">
+             <AlertCircle className="h-5 w-5 mr-3 shrink-0" />
+             <span>{error}</span>
+           </div>
+           <Button variant="outline" onClick={fetchConfigs}>
+             Try again
+           </Button>
          </div>
        )}
 

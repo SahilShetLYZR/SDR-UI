@@ -7,6 +7,7 @@ import { Plus, Trash2, Loader2 } from "lucide-react";
 import { OtherSettings as OtherSettingsType } from "@/services/campaignSettingsService";
 import { useToast } from "@/components/ui/use-toast";
 import { campaignSettingsService } from "@/services/campaignSettingsService";
+import { normalizeUrl, URL_ERROR_MESSAGE } from "@/lib/url";
 
 interface OtherSettingsProps {
   settings?: OtherSettingsType;
@@ -78,12 +79,7 @@ export default function OtherSettings({ settings, campaignId, settingsId, onSett
   // Validation functions
   const validateUrl = (url: string): string => {
     if (!url) return '';
-    try {
-      new URL(url);
-      return '';
-    } catch (e) {
-      return 'Please enter a valid URL (e.g., https://example.com)';
-    }
+    return normalizeUrl(url) ? '' : URL_ERROR_MESSAGE;
   };
   
   const isValidEmail = (email: string): boolean => {
@@ -162,9 +158,9 @@ export default function OtherSettings({ settings, campaignId, settingsId, onSett
       
       // Collect the updated settings data with all required fields
       const updatedSettings = {
-        website_url: { 
+        website_url: {
           ...websiteUrlSetting,
-          field_value: websiteUrl 
+          field_value: websiteUrl ? normalizeUrl(websiteUrl) ?? websiteUrl : websiteUrl
         },
         cc_list: { 
           ...settingsData.cc_list, 
@@ -234,10 +230,11 @@ export default function OtherSettings({ settings, campaignId, settingsId, onSett
           <p className="text-sm text-muted-foreground">Your company website URL</p>
         </div>
         <div className="space-y-1">
-          <Input 
+          <Input
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
-            placeholder="Enter website URL"
+            onBlur={() => setWebsiteUrl((prev) => normalizeUrl(prev) ?? prev)}
+            placeholder="example.com"
             className={errors.websiteUrl ? "border-red-500" : ""}
           />
           {errors.websiteUrl && (

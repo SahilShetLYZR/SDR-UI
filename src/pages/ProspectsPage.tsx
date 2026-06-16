@@ -873,11 +873,11 @@ const ProspectsPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {prospect.sequence_status || prospect.phase || "Not Started"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="ghost" size="sm">
-                            Actions
+                            Manage
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-40 p-0">
