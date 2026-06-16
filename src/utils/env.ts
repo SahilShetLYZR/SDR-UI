@@ -32,5 +32,22 @@ export const isDevMode = (): boolean => {
  * @returns boolean indicating if Studio popup auth is enabled
  */
 export const isLocalStudioAuth = (): boolean => {
-  return import.meta.env.VITE_LOCAL_STUDIO_AUTH === 'true';
+  // Environment-aware (intentionally ignores VITE_LOCAL_STUDIO_AUTH).
+  //
+  // On a REAL deployed domain -> false -> use the lyzr-agent SDK, which sends
+  // users to the full studio.lyzr.ai sign-in page (Google / LinkedIn / GitHub
+  // / Email) and redirects back. This is what every prod user needs (e.g.
+  // non-Google sign-ins like Davis couldn't log in via the Google-only popup).
+  //
+  // On LOCALHOST -> true -> use the Memberstack Google popup. The SDK's
+  // studio.lyzr.ai redirect can't complete on localhost: its session cookie is
+  // scoped to .lyzr.ai, so localhost lands back with no session and getKeys()
+  // fails. The popup avoids the cross-domain round-trip so local dev works.
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') {
+      return true;
+    }
+  }
+  return false;
 };
