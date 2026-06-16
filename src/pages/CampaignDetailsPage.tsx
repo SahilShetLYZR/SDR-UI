@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, PlusIcon } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import CampaignTabs from '@/components/campaign/CampaignTabs';
@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 import AnalyticsPage from './Analytics';
 import { campaignService, ApiCampaign } from '@/services/campaignService';
 import { campaignSettingsService, CampaignSettings } from '@/services/campaignSettingsService';
-import CreateCampaignDialog from '@/pages/CreateCampaignDialog';
 import PageHeader from '@/components/layout/PageHeader';
 import { useToast } from '@/components/ui/use-toast';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -26,7 +25,6 @@ const CampaignDetailsPage: React.FC = () => {
   const [settings, setSettings] = useState<CampaignSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const searchParams = new URLSearchParams(location.search);
   const isFromAdmin = searchParams.get('from') === 'admin';
 
@@ -55,12 +53,6 @@ const CampaignDetailsPage: React.FC = () => {
       console.error('Error updating data after save:', error);
     }
   }, [id]);
-
-  const fetchCampaigns = async () => {
-    navigate(`/campaign`);
-  };
-
-  const openCreateModal = () => setIsCreateModalOpen(true);
 
   useEffect(() => {
     if (adminLoading) return;
@@ -194,12 +186,6 @@ const CampaignDetailsPage: React.FC = () => {
             </Badge>
           </span>
         }
-        actions={
-          <Button onClick={openCreateModal} className="bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/25">
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Create New
-          </Button>
-        }
       />
       <div className="border-b bg-white">
         <CampaignTabs campaignId={campaign._id} isActive={campaign.is_active} />
@@ -212,11 +198,6 @@ const CampaignDetailsPage: React.FC = () => {
           <Outlet context={{ campaign, settings, updateSettings, isActive: campaign.is_active }} />
         )}
       </div>
-      <CreateCampaignDialog
-        open={isCreateModalOpen}
-        onOpenChange={setIsCreateModalOpen}
-        onSuccess={fetchCampaigns}
-      />
     </div>
   );
 };
