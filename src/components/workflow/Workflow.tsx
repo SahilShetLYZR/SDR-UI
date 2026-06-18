@@ -10,10 +10,15 @@ import {
   workflowService,
   ApiWorkflowWithActions,
   ApiAction,
+  AddActionRequest,
   UpdateActionRequest,
   DeleteActionRequest,
   ReorderActionsRequest,
 } from "@/services/WorkflowService";
+import {
+  templateLibraryService,
+  EmailTemplateLibraryItem,
+} from "@/services/templateLibraryService";
 import { toast } from "sonner";
 
 type WorkflowContext = {
@@ -186,6 +191,42 @@ export default function Workflow() {
     },
   });
 
+  // Mutation for adding a step from a saved template
+  const addFromTemplateMutation = useMutation({
+    mutationFn: (template: EmailTemplateLibraryItem) => {
+      if (!workflowId) throw new Error("Workflow ID is missing");
+      const data: AddActionRequest = {
+        name: template.name,
+        description: template.tag || "",
+        workflow_id: workflowId,
+        action_type: "EmailSending",
+        action_payload: {
+          email_templates: { subject: template.subject, body: template.body },
+        },
+        time_interval: 0,
+      };
+      return workflowService.addAction(data);
+    },
+    onSuccess: (created, template) => {
+      toast.success(`Added "${template.name}" from template`);
+      // Record reuse (best-effort) and refresh, then open the new step.
+      templateLibraryService.use(template._id).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: queryKeys.workflow(campaignId!) });
+      if (created?._id) setSelectedActionId(created._id);
+    },
+    onError: (err) => {
+      console.error("Error adding from template:", err);
+      toast.error("Couldn't add the template as a step.");
+    },
+  });
+
+  const handleAddFromTemplate = useCallback(
+    (template: EmailTemplateLibraryItem) => {
+      addFromTemplateMutation.mutate(template);
+    },
+    [addFromTemplateMutation]
+  );
+
   // Mutation for reordering actions
   const reorderActionsMutation = useMutation({
     mutationFn: (reorderedActions: ApiAction[]) => {
@@ -342,6 +383,8 @@ export default function Workflow() {
           onReorder={handleReorderActions}
           onDeleteAction={handleDeleteAction}
           onEditWorkflow={handleEditWorkflow}
+          onUseTemplate={handleAddFromTemplate}
+          isAddingTemplate={addFromTemplateMutation.isPending}
         />
       </div>
       <div className="p-4 w-4/5 h-full rounded-xl flex flex-col gap-4">
