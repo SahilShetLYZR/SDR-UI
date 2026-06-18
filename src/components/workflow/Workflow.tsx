@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
-import { useParams, useOutletContext } from "react-router-dom";
+import { useParams, useOutletContext, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import FlowOrder from "@/components/workflow/FlowOrder";
 import ActionDetails from "@/components/workflow/ActionDetails";
 import WorkflowChat from "@/components/workflow/WorkflowChat";
 import EmailTemplateEditor from "@/components/workflow/EmailTemplateEditor";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   workflowService,
   ApiWorkflowWithActions,
@@ -26,7 +27,25 @@ const queryKeys = {
 
 export default function Workflow() {
   const { id: campaignId } = useParams<{ id: string }>();
-  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
+  // Selected email step lives in the URL (?step=<id>) so it survives a
+  // background refetch, a save, and a full page reload — the editor stays on
+  // the step the user was working on instead of snapping back to the chat.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedActionId = searchParams.get("step");
+  const setSelectedActionId = useCallback(
+    (id: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (id) next.set("step", id);
+          else next.delete("step");
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
   const [previousSelectedActionId, setPreviousSelectedActionId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { isActive } = useOutletContext<WorkflowContext>();
@@ -46,12 +65,15 @@ export default function Workflow() {
 
   const workflowId = workflowData?._id;
 
-  // Reset selected action when workflow data changes
+  // Keep the selection valid without discarding it: only clear it if the
+  // selected step no longer exists in the refreshed workflow (e.g. deleted in
+  // another tab). A normal refetch/save no longer kicks the user back to chat.
   useEffect(() => {
-    if (workflowData) {
-      setSelectedActionId(null);
+    if (workflowData && selectedActionId) {
+      const stillExists = workflowData.actions.some((a) => a._id === selectedActionId);
+      if (!stillExists) setSelectedActionId(null);
     }
-  }, [workflowData]);
+  }, [workflowData, selectedActionId, setSelectedActionId]);
 
   // Handle query errors
   useEffect(() => {
@@ -226,7 +248,7 @@ export default function Workflow() {
   const handleSelectAction = useCallback((actionId: string) => {
     setSelectedActionId(actionId);
     setPreviousSelectedActionId(null); // Clear previous selection when manually selecting
-  }, []);
+  }, [setSelectedActionId]);
 
   const handleUpdateAction = useCallback(
     (actionUpdateData: Omit<UpdateActionRequest, "workflow_id">) => {
@@ -255,7 +277,7 @@ export default function Workflow() {
   const handleEditWorkflow = useCallback(() => {
     setPreviousSelectedActionId(selectedActionId); // Store current selection
     setSelectedActionId(null); // Deselect current action to show WorkflowChat
-  }, [selectedActionId]);
+  }, [selectedActionId, setSelectedActionId]);
 
   // Derived state
   const selectedAction =
@@ -267,13 +289,35 @@ export default function Workflow() {
   // Convert error to string for display
   const errorMessage = error instanceof Error ? error.message : "Failed to load workflow data.";
 
-  // Render logic
+  // Render logic — shimmer skeleton that mirrors the real workflow layout
+  // (left step list + right editor/chat panel).
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-var(--header-height,60px))] w-full">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] mb-4"></div>
-          <div className="text-xl font-medium">Loading workflow...</div>
+      <div className="py-4 h-[calc(100vh-var(--header-height,60px))] w-full flex space-x-4" role="status" aria-label="Loading workflow">
+        {/* Left: step list */}
+        <div className="p-4 h-full flex flex-col space-y-3 w-1/5 border-r dark:border-gray-700">
+          <Skeleton className="h-7 w-2/3" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-xl" />
+          ))}
+        </div>
+        {/* Right: editor / chat panel */}
+        <div className="p-4 w-4/5 h-full rounded-xl flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-8 w-1/3" />
+            <Skeleton className="h-8 w-24 rounded-md" />
+          </div>
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <div className="flex-1 space-y-3 rounded-lg border border-gray-100 p-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-11/12" />
+            <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+          <Skeleton className="h-11 w-full rounded-lg" />
         </div>
       </div>
     );

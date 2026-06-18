@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import {Trash2, Download, Search, Plus, FileText, FileDown, File} from "lucide-react";
+import {Trash2, Download, Search, Plus, FileText, FileDown, File, Pencil, RefreshCw} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KbDocument } from "@/types/knowledgeBase";
@@ -10,13 +10,22 @@ interface TableProps {
   isLoading: boolean;
   onDelete: (documentId: string) => void;
   onUpload: () => void;
+  onEdit: (doc: KbDocument) => void;
+  onRecrawl: (doc: KbDocument) => void;
+  recrawlingName?: string | null;
 }
+
+// Every entry is manually editable by the user, regardless of type.
+const isWebsite = (doc: KbDocument) => doc.doc_type?.toLowerCase() === "website";
 
 const Table: React.FC<TableProps> = ({
   documents,
   isLoading,
   onDelete,
   onUpload,
+  onEdit,
+  onRecrawl,
+  recrawlingName,
 }) => {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
@@ -113,7 +122,7 @@ const Table: React.FC<TableProps> = ({
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
                 Updated At
               </th>
-              <th className="px-4 py-3 w-20"></th>
+              <th className="px-4 py-3 w-36"></th>
             </tr>
           </thead>
           <tbody>
@@ -132,24 +141,19 @@ const Table: React.FC<TableProps> = ({
               filteredData.map((doc) => (
                 <tr key={doc._id} className="border-b">
                   <td className="px-4 py-3 text-sm">
-                    {['pdf', 'docx', 'txt'].includes(doc.doc_type.toLowerCase()) ? (
-                      <a
-                        href={doc.doc_link}
-                        download
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center hover:text-blue-800 transition-colors"
-                      >
-                        <span className="mr-2">
-                          {doc.doc_type === 'pdf' && <FileText size={16}/>}
-                          {doc.doc_type === 'docx' && <File size={16}/>}
-                          {doc.doc_type === 'txt' && <FileDown size={16}/>}
-                        </span>
-                        {doc.name}
-                      </a>
-                    ) : (
-                      doc.name
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => onEdit(doc)}
+                      title="View what was fed to the agent"
+                      className="flex items-center text-left font-medium text-zinc-800 hover:text-purple-700 hover:underline transition-colors"
+                    >
+                      <span className="mr-2">
+                        {doc.doc_type === 'pdf' && <FileText size={16}/>}
+                        {doc.doc_type === 'docx' && <File size={16}/>}
+                        {doc.doc_type === 'txt' && <FileDown size={16}/>}
+                      </span>
+                      {doc.name}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-sm capitalize">
                     {doc.doc_type === "file"
@@ -169,14 +173,38 @@ const Table: React.FC<TableProps> = ({
                       : "-"}
                   </td>
                   <td className="px-4 py-3 text-sm text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDelete(doc.name)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4"/>
-                    </Button>
+                    <div className="flex justify-end items-center gap-1">
+                      {isWebsite(doc) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRecrawl(doc)}
+                          disabled={recrawlingName === doc.name}
+                          title="Re-crawl website"
+                          className="text-gray-500 hover:text-purple-700 hover:bg-purple-50"
+                        >
+                          <RefreshCw className={`h-4 w-4 ${recrawlingName === doc.name ? "animate-spin" : ""}`}/>
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEdit(doc)}
+                        title="Edit"
+                        className="text-gray-500 hover:text-purple-700 hover:bg-purple-50"
+                      >
+                        <Pencil className="h-4 w-4"/>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDelete(doc.name)}
+                        title="Delete"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4"/>
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))

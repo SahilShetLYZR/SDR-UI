@@ -17,6 +17,7 @@ import AnalyticsPage from "@/pages/Analytics.tsx";
 import Settings from "@/pages/SettingsPage.tsx";
 import DomainConfigPage from "@/pages/DomainConfigPage.tsx";
 import AdminDashboard from "@/pages/AdminDashboard.tsx";
+import TemplatesPage from "@/pages/TemplatesPage.tsx";
 
 export const AnimatedRoutes = ()=> {
   return (
@@ -50,6 +51,7 @@ export const AnimatedRoutes = ()=> {
               <Route key={Path.SETTINGS} path={Path.SETTINGS} element={<Settings />} />
             </Route>
             <Route key={Path.SETTINGS} path={Path.SETTINGS} element={<Settings />} />
+            <Route key={Path.TEMPLATES} path={Path.TEMPLATES} element={<TemplatesPage />} />
             <Route key={Path.DOMAIN_CONFIGS} path={Path.DOMAIN_CONFIGS} element={<DomainConfigPage />} />
             <Route key={Path.ADMIN} path={Path.ADMIN} element={<AdminDashboard />} />
           </Route>

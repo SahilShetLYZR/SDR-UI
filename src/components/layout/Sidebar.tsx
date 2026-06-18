@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Compass, Menu, Send, ShieldCheck, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Compass, Mail, Menu, Send, ShieldCheck, SlidersHorizontal, X } from 'lucide-react';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { cn } from '@/lib/utils';
 import AvatarButton from "@/components/layout/AvatarButton.tsx";
@@ -88,6 +88,13 @@ const Sidebar: React.FC = () => {
             ? false
             : location.pathname.includes('/campaign')
         }
+        isExpanded={isExpanded}
+      />
+      <NavItem
+        icon={<Mail className="h-5 w-5" strokeWidth={1.75} />}
+        label="Templates"
+        to={`/${Path.TEMPLATES}`}
+        active={location.pathname.startsWith('/templates')}
         isExpanded={isExpanded}
       />
       <NavItem

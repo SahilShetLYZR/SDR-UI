@@ -8,10 +8,14 @@ import { KnowledgeBaseService } from '@/services/knowledgeBaseService';
 import { X, TriangleAlert, Upload, FileText, Globe } from 'lucide-react';
 import { campaignService } from '@/services/campaignService';
 import { normalizeUrl, URL_ERROR_MESSAGE } from '@/lib/url';
+import { friendlyError } from '@/lib/friendlyError';
 
 interface UploadModalProps {
   onClose: () => void;
-  onSuccess: () => void;
+  // `async: true` means the backend ingests in the background (websites are
+  // crawled after the request returns) so the parent should poll for the new
+  // document instead of refetching once.
+  onSuccess: (info?: { async?: boolean }) => void;
   campaignId: string;
 }
 
@@ -137,7 +141,10 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onSuccess, campaignI
         title: "Website added",
         description: "We're reading it now — content will appear in your knowledge base shortly.",
       });
-      onSuccess();
+      // Website ingestion is asynchronous on the backend, so tell the parent to
+      // poll for the new document rather than refetch a single time (which
+      // returns before the crawl finishes — the "need to refresh" bug).
+      onSuccess({ async: true });
     } catch (error) {
       console.error('Error adding website:', error);
       toast({

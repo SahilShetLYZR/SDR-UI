@@ -245,17 +245,14 @@ const CampaignPage: React.FC = () => {
                   {filteredCampaigns.map((campaign) => (
                     <tr key={campaign._id} className="border-b border-zinc-100 transition-colors hover:bg-zinc-50/60">
                       <td className="px-4 py-3 text-sm">
-                        <div className="flex items-center font-medium text-zinc-800">
+                        <button
+                          type="button"
+                          onClick={(e) => handleViewCampaign(campaign._id, e)}
+                          className="text-left font-medium text-zinc-800 hover:text-purple-600 hover:underline transition-colors"
+                          title="Open campaign"
+                        >
                           {campaign.name}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => handleViewCampaign(campaign._id, e)}
-                          >
-                            <Eye className="h-4 w-4 mr-1"/>
-                            View
-                          </Button>
-                        </div>
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-sm">{new Date(campaign.created_at).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-sm">{campaign.total_prospects || 0}</td>
@@ -272,6 +269,23 @@ const CampaignPage: React.FC = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-right">
                         <div className="flex justify-end space-x-1">
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Button
+                                key={campaign._id + "view"}
+                                variant="link"
+                                size="icon"
+                                className="group-hover:visible"
+                                onClick={(e) => handleViewCampaign(campaign._id, e)}
+                              >
+                                <Eye className="h-4 w-4"/>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent className="border-none">
+                              View
+                            </TooltipContent>
+                          </Tooltip>
+
                           <Tooltip>
                             <TooltipTrigger>
                               <Button
