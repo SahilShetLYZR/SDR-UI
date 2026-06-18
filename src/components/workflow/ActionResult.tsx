@@ -45,12 +45,15 @@ export default function ActionResult({
   const [campaignSettings, setCampaignSettings] = useState<CampaignSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
 
-  // Get the email to display - prioritize campaign settings, fallback to hardcoded
+  // Get the sender to display: the preview's actual from address, then the
+  // campaign's configured sending email, then a clearly-placeholder address
+  // (never a hardcoded stranger).
   const getDisplayEmail = () => {
+    if (from_email) return from_email;
     if (campaignSettings?.general?.campaign_email?.field_value) {
       return campaignSettings.general.campaign_email.field_value as string;
     }
-    return "john@richfire.us"; // fallback to hardcoded value
+    return "your-address@yourdomain.com";
   };
 
   const displayEmail = getDisplayEmail();

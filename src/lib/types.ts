@@ -14,6 +14,7 @@ export enum Path {
   ANALYTICS = "analytics",
   SETTINGS = "settings",
   SETTING = "setting",
+  TEMPLATES = "templates",
   DOMAIN_CONFIGS = "settings/domain-configs",
 }
 

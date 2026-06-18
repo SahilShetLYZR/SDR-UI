@@ -25,7 +25,9 @@ import {
 } from "@/components/ui/dialog";
 import { ActionType, AddActionRequest, workflowService, ApiFile } from "@/services/WorkflowService";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Mail } from "lucide-react";
+import TemplatePickerDialog from "@/components/templates/TemplatePickerDialog";
+import { EmailTemplateLibraryItem } from "@/services/templateLibraryService";
 
 interface CreateActionProps {
   workflowId: string;
@@ -57,6 +59,11 @@ export default function CreateAction({
   const [uploadedFiles, setUploadedFiles] = useState<Array<{id: string, filename: string}>>([]);
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
+  // When the action is started from a saved template, hold its subject/body so
+  // it prefills the new step's email content.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [templateContent, setTemplateContent] = useState<{ subject: string; body: string } | null>(null);
+
   const resetForm = () => {
     setActionName("");
     setActionDescription("");
@@ -69,6 +76,15 @@ export default function CreateAction({
     setAttachmentFiles([]);
     setUploadedFiles([]);
     setIsUploading(false);
+    setTemplateContent(null);
+  };
+
+  const handlePickTemplate = (t: EmailTemplateLibraryItem) => {
+    setActionType("EmailSending");
+    if (!actionName.trim()) setActionName(t.name);
+    if (!actionDescription.trim() && t.tag) setActionDescription(t.tag);
+    setTemplateContent({ subject: t.subject || "", body: t.body || "" });
+    toast.success(`Started from "${t.name}"`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,6 +110,13 @@ export default function CreateAction({
       actionPayload.email_subject = "";
       actionPayload.email_body = "";
       actionPayload.to_email = "";
+      // Prefill from a chosen library template so the new step opens with it.
+      if (templateContent) {
+        actionPayload.email_templates = {
+          subject: templateContent.subject,
+          body: templateContent.body,
+        };
+      }
     }
     
     const newActionData: AddActionRequest = {
@@ -150,6 +173,16 @@ export default function CreateAction({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {/* Start from a saved template */}
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-200 bg-purple-50/50 px-3 py-2.5 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-50"
+            >
+              <Mail className="h-4 w-4" />
+              {templateContent ? "Template applied — pick another" : "Start from a template"}
+            </button>
+
             {/* Action Name Input */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="action-name" className="text-right">
@@ -444,6 +477,8 @@ export default function CreateAction({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <TemplatePickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onPick={handlePickTemplate} />
     </Dialog>
   );
 }

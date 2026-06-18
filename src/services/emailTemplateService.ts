@@ -1,4 +1,5 @@
 import api from '@/lib/api';
+import { EditorThreadMessage } from '@/services/emailEditorThreadService';
 
 export interface EmailTemplate {
   id: string;
@@ -15,12 +16,20 @@ export interface EmailTemplateUpdateRequest {
   subject?: string;
   content?: string;
   message: string; // Natural language instruction for changes
+  history?: EditorThreadMessage[]; // Recent conversation so the bot remembers
 }
 
 export interface EmailTemplateUpdateResponse {
   success: boolean;
   updated_template: EmailTemplate;
   changes_made: string;
+}
+
+export interface EmailTemplateSaveRequest {
+  action_id: string;
+  campaign_id?: string;
+  subject?: string;
+  content?: string;
 }
 
 class EmailTemplateService {
@@ -75,6 +84,31 @@ class EmailTemplateService {
       };
     } catch (error) {
       console.error('Error updating email template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save the user's manual edits verbatim (no AI rewrite). Uses PUT, which the
+   * backend persists exactly as entered (after deterministic AI-slop
+   * sanitizing), so direct edits are reliable and survive a refresh.
+   */
+  async saveEmailTemplate(data: EmailTemplateSaveRequest): Promise<EmailTemplate> {
+    try {
+      const response = await api.put(`workflow/action/email-template`, data);
+      return {
+        id: response?.data?._id ?? data.action_id,
+        subject: response?.data?.action_payload?.email_templates?.subject ?? data.subject ?? "",
+        content: response?.data?.action_payload?.email_templates?.body ?? data.content ?? "",
+        from_email: response?.data?.action_payload?.email_templates?.from_email,
+        to_email: response?.data?.action_payload?.email_templates?.to_email,
+        variables: {
+          firstName: "{{firstName}}",
+          companyName: "[Company Name]"
+        }
+      };
+    } catch (error) {
+      console.error('Error saving email template:', error);
       throw error;
     }
   }

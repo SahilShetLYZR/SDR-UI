@@ -1,5 +1,13 @@
 import api from '@/lib/api';
-import { KbDocument, KbTextRequest, KbWebsiteRequest, KbFileRequest } from '@/types/knowledgeBase';
+import {
+  KbDocument,
+  KbTextRequest,
+  KbWebsiteRequest,
+  KbFileRequest,
+  KbWebsiteUpdateRequest,
+  KbTextUpdateRequest,
+  KbDocumentContentUpdateRequest,
+} from '@/types/knowledgeBase';
 
 export const KnowledgeBaseService = {
   /**
@@ -70,6 +78,97 @@ export const KnowledgeBaseService = {
       return response.data;
     } catch (error) {
       console.error('Error adding file to knowledge base:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Edit / re-crawl a website document. The backend deletes the old document
+   * and re-crawls the URL under the (possibly changed) name. Passing the same
+   * name + URL is a plain re-crawl.
+   */
+  updateWebsite: async (data: KbWebsiteUpdateRequest): Promise<KbDocument> => {
+    try {
+      const response = await api.put(`/kb/website`, {
+        kb_id: data.kb_id,
+        old_name: data.old_name,
+        source: data.source,
+        urls: data.urls,
+        name: data.name,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating website in knowledge base:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Edit a text document (replaces it: delete old + add new).
+   */
+  updateText: async (data: KbTextUpdateRequest): Promise<KbDocument> => {
+    try {
+      const response = await api.put(`/kb/text`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating text in knowledge base:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Replace an existing entry's file (any type) with a newly uploaded one,
+   * keeping the entry's name.
+   */
+  replaceFile: async (kbId: string, oldName: string, file: File): Promise<KbDocument> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await api.put(
+        `/kb/file?kb_id=${encodeURIComponent(kbId)}&old_name=${encodeURIComponent(oldName)}`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error replacing file:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch the text the agent holds for a document (backfills entries created
+   * before content was stored locally). Returns "" if unavailable.
+   */
+  getDocumentContent: async (kbId: string, name: string, docLink = ""): Promise<string> => {
+    try {
+      const response = await api.get(`/kb/document/content`, {
+        params: { kb_id: kbId, name, doc_link: docLink },
+      });
+      return response.data?.content ?? "";
+    } catch (error) {
+      console.error('Error fetching document content:', error);
+      return "";
+    }
+  },
+
+  /**
+   * Manually edit any document's content (user-authored). Preserves the
+   * document's type and link; replaces the text fed to the agent.
+   */
+  updateDocumentContent: async (data: KbDocumentContentUpdateRequest): Promise<KbDocument> => {
+    try {
+      const response = await api.put(`/kb/document`, {
+        kb_id: data.kb_id,
+        old_name: data.old_name,
+        name: data.name,
+        content: data.content,
+        doc_type: data.doc_type,
+        doc_link: data.doc_link ?? '',
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating document content:', error);
       throw error;
     }
   },

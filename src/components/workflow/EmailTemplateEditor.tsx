@@ -1,19 +1,25 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import * as Diff from "diff";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatEmailSubject, unescapeLiteralSequences } from "@/lib/emailFormat";
+import { sanitizeEmailText, sanitizeEmailSubject } from "@/lib/emailSanitize";
 import { Badge } from "@/components/ui/badge";
-import { Send, Eye, Copy, Save, ArrowLeft } from "lucide-react";
+import { Send, Eye, Copy, ArrowLeft, Pencil, X, Check, Loader2, RotateCcw, BookmarkPlus } from "lucide-react";
+import TemplateEditorDialog from "@/components/templates/TemplateEditorDialog";
 import { ApiAction } from "@/services/WorkflowService";
-import { 
-  emailTemplateService, 
+import {
+  emailTemplateService,
   EmailTemplate,
-  EmailTemplateUpdateRequest 
+  EmailTemplateUpdateRequest
 } from "@/services/emailTemplateService";
+import {
+  emailEditorThreadService,
+  EditorThreadMessage,
+} from "@/services/emailEditorThreadService";
 import { ProspectsService } from "@/services/prospectsService";
 import { ActionApiService } from "@/services/ActionApiService";
 import { CampaignMailService } from "@/services/CampaignMailService";
@@ -28,6 +34,72 @@ interface ChatMessage {
   changes_made?: string;
 }
 
+type SaveStatus = "idle" | "saving" | "saved";
+
+// The bot's opening line. Shown when there's no saved conversation yet.
+const WELCOME_MESSAGE: ChatMessage = {
+  id: "welcome",
+  content:
+    "Hi, I'm Jazon. Tell me how you'd like this email to read and I'll rewrite it, keeping everything we've changed so far. Try \"make it shorter\", \"remove the dashes\", or \"warmer opening line\".",
+  isUser: false,
+  timestamp: new Date(),
+};
+
+// Map the UI message shape to/from the persisted wire shape.
+const toWire = (m: ChatMessage): EditorThreadMessage => ({
+  id: m.id,
+  role: m.isUser ? "user" : "assistant",
+  content: m.content,
+  changes_made: m.changes_made ?? null,
+  created_at: m.timestamp instanceof Date ? m.timestamp.toISOString() : undefined,
+});
+
+const fromWire = (m: EditorThreadMessage): ChatMessage => ({
+  id: m.id,
+  content: m.content,
+  isUser: m.role === "user",
+  timestamp: m.created_at ? new Date(m.created_at) : new Date(),
+  changes_made: m.changes_made ?? undefined,
+});
+
+/**
+ * Build a specific confirmation of what Jazon actually changed, instead of a
+ * generic "changes applied" line. Names the fields touched (subject / body) and
+ * echoes the user's instruction so the reply reads like a real assistant.
+ */
+const describeChange = (
+  prevSubject: string,
+  nextSubject: string,
+  prevBody: string,
+  nextBody: string,
+  instruction?: string
+): string => {
+  const fields: string[] = [];
+  if (prevSubject !== nextSubject) fields.push("subject line");
+  if (prevBody !== nextBody) fields.push("email body");
+  const what = fields.length === 0 ? "email" : fields.join(" and ");
+
+  // Clean the instruction so the echo reads naturally: drop placeholders,
+  // collapse whitespace/newlines, trim trailing punctuation.
+  const req = (instruction || "")
+    .replace(/\{[^}]*\}/g, "")
+    .replace(/\[[^\]]*\]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[.!,]+$/, "");
+
+  // Only echo a SHORT, single-clause instruction. Long pastes or multi-part
+  // requests (periods, "and/then/also") would garble the sentence, so for
+  // those we just confirm which fields changed.
+  const isShortSingle =
+    req.length > 0 && req.length <= 48 && !/[.\n]|\b(and|then|also|plus)\b/i.test(req);
+  if (isShortSingle) {
+    const lead = req.charAt(0).toLowerCase() + req.slice(1);
+    return `Done — updated the ${what} to ${lead}.`;
+  }
+  return `Done — updated the ${what}.`;
+};
+
 interface EmailTemplateEditorProps {
   selectedAction: ApiAction;
   campaignId?: string;
@@ -41,116 +113,88 @@ interface DiffState {
   showingDiff: boolean;
 }
 
-interface DiffChunk {
-  type: 'added' | 'removed' | 'unchanged';
-  value: string;
-  index: number;
-}
-
 // Query Keys
 const queryKeys = {
   emailTemplate: (actionId: string) => ['emailTemplate', actionId] as const,
 };
 
-// Animation components for diff display
-const AnimatedText = ({ chunk, delay }: { chunk: DiffChunk; delay: number }) => {
-  if (chunk.type === 'unchanged') {
-    return <span className="text-gray-600">{chunk.value}</span>;
-  }
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  if (chunk.type === 'removed') {
-    return (
-      <motion.span
-        initial={{ opacity: 1, backgroundColor: 'rgb(254, 202, 202)' }}
-        animate={{ opacity: 0, backgroundColor: 'rgb(239, 68, 68)' }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.8, delay }}
-        className="line-through text-red-600 px-1 rounded"
-      >
-        {chunk.value}
-      </motion.span>
-    );
-  }
-
-  if (chunk.type === 'added') {
-    return (
-      <motion.span
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1, backgroundColor: 'rgb(187, 247, 208)' }}
-        transition={{ 
-          opacity: { duration: 0.1, delay: delay + 1.2 },
-          backgroundColor: { duration: 0.5, delay: delay + 1.2 }
-        }}
-        className="text-green-600 px-1 rounded font-medium"
-      >
-        <motion.span
-          initial={{ width: 0, display: 'inline-block', overflow: 'hidden' }}
-          animate={{ width: 'auto' }}
-          transition={{ duration: 0.6, delay: delay + 1.3 }}
-        >
-          {chunk.value}
-        </motion.span>
-      </motion.span>
-    );
-  }
-
-  return null;
-};
-
-const DiffDisplay = ({ 
-  title, 
-  oldText, 
-  newText, 
-  onComplete 
-}: { 
-  title: string; 
-  oldText: string; 
-  newText: string; 
+/**
+ * Shows the existing text, then replaces it with the new text line by line:
+ * the old copy crossfades out underneath while each new line fades and rises
+ * into place, staggered. No scattered word highlights, no width animations, no
+ * layout gaps — it simply reads as "the email is being rewritten". Honors
+ * reduced-motion by snapping straight to the new text.
+ */
+const LineReplaceReveal = ({
+  oldText,
+  newText,
+  singleLine = false,
+  onComplete,
+}: {
+  oldText: string;
+  newText: string;
+  singleLine?: boolean;
   onComplete: () => void;
 }) => {
-  const [chunks, setChunks] = useState<DiffChunk[]>([]);
+  const reduced = prefersReducedMotion();
+  const newLines = (newText || "").split("\n");
+
+  // Timeline: brief hold on the old copy, then per-line reveal, then settle.
+  const FADE_OUT = 0.32; // old copy exit (s)
+  const START = 0.18; // when new lines start arriving (s)
+  const PER_LINE = 0.05; // stagger between lines (s)
+  const LINE_DUR = 0.3; // each line's entrance (s)
 
   useEffect(() => {
-    const diff = Diff.diffWords(oldText, newText);
-    const processedChunks: DiffChunk[] = diff.map((part, index) => ({
-      type: part.added ? 'added' : part.removed ? 'removed' : 'unchanged',
-      value: part.value,
-      index
-    }));
-    setChunks(processedChunks);
+    if (reduced) {
+      onComplete();
+      return;
+    }
+    const totalMs = (START + newLines.length * PER_LINE + LINE_DUR + 0.2) * 1000;
+    const t = setTimeout(onComplete, Math.min(totalMs, 4000));
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oldText, newText]);
 
-    // Auto-complete animation after 3 seconds
-    const timer = setTimeout(onComplete, 3000);
-    return () => clearTimeout(timer);
-  }, [oldText, newText, onComplete]);
+  const baseText = singleLine
+    ? "text-lg font-medium text-gray-900"
+    : "whitespace-pre-wrap text-gray-800 leading-relaxed text-[15px]";
+
+  if (reduced) {
+    return <div className={baseText}>{newText}</div>;
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg"
-    >
-      <div className="text-sm font-medium text-purple-700 mb-2 flex items-center gap-2">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full"
-        />
-        {title}
+    <div className="relative">
+      {/* Old copy crossfades out underneath (exit faster than enter). */}
+      <motion.div
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 ${baseText} text-gray-300`}
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 0 }}
+        transition={{ duration: FADE_OUT, ease: "easeIn" }}
+      >
+        {oldText}
+      </motion.div>
+
+      {/* New copy reveals line by line. */}
+      <div className={baseText}>
+        {newLines.map((line, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: LINE_DUR, delay: START + i * PER_LINE, ease: "easeOut" }}
+          >
+            {line || " "}
+          </motion.div>
+        ))}
       </div>
-      <div className="text-gray-800 leading-relaxed" style={{ fontSize: '15px' }}>
-        <AnimatePresence mode="wait">
-          {chunks.map((chunk, index) => (
-            <AnimatedText 
-              key={`${chunk.type}-${index}`} 
-              chunk={chunk} 
-              delay={index * 0.1}
-            />
-          ))}
-        </AnimatePresence>
-      </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -160,15 +204,17 @@ export default function EmailTemplateEditor({
   workflowId 
 }: EmailTemplateEditorProps) {
   const queryClient = useQueryClient();
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: "1",
-      content: "I've generated a new email step template for you! You can customize any part of this email by simply telling me what you'd like to change. For example: \"Make the subject line more engaging\" or \"Add a call-to-action button\".",
-      isUser: false,
-      timestamp: new Date(),
-    },
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [inputValue, setInputValue] = useState("");
+
+  // Conversation persistence state
+  const [threadLoaded, setThreadLoaded] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Latest values captured for the page-unload save (refs avoid stale closures).
+  const latestMessagesRef = useRef<ChatMessage[]>([WELCOME_MESSAGE]);
+  const actionIdRef = useRef<string>(selectedAction._id);
+  const campaignIdRef = useRef<string | undefined>(campaignId);
   const [diffState, setDiffState] = useState<DiffState>({
     isAnimating: false,
     oldTemplate: null,
@@ -191,7 +237,15 @@ export default function EmailTemplateEditor({
   // Retry functionality state
   const [retryCount, setRetryCount] = useState(0);
   const [lastRequest, setLastRequest] = useState<EmailTemplateUpdateRequest | null>(null);
-  
+
+  // Direct manual-edit state (edit the template text yourself, no AI rewrite)
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editSubject, setEditSubject] = useState("");
+  const [editContent, setEditContent] = useState("");
+
+  // Save-as-template (to the reusable library)
+  const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -251,18 +305,27 @@ export default function EmailTemplateEditor({
           
           // Reset retry count on successful change
           setRetryCount(0);
-          
+
+          // Describe what actually changed (fields + the user's instruction).
+          const summary = describeChange(
+            context.previousTemplate.subject,
+            result.updated_template.subject,
+            context.previousTemplate.content,
+            result.updated_template.content,
+            variables.message
+          );
+
           // Add assistant response message
           const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
-            content: result.changes_made,
+            content: summary,
             isUser: false,
             timestamp: new Date(),
-            changes_made: result.changes_made,
+            changes_made: summary,
           };
 
           setChatMessages(prev => [...prev, assistantMessage]);
-          toast.success("Email template updated successfully");
+          toast.success("Email updated");
           
         } else {
           // No changes detected - check if we should retry
@@ -316,13 +379,15 @@ export default function EmailTemplateEditor({
           showingDiff: false,
         });
         
-        // Add assistant response message
+        // No previous snapshot to diff — still confirm specifically using the
+        // user's instruction rather than a generic line.
+        const summary = describeChange("", "", "", "", variables.message);
         const assistantMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
-          content: result.changes_made,
+          content: summary,
           isUser: false,
           timestamp: new Date(),
-          changes_made: result.changes_made,
+          changes_made: summary,
         };
 
         setChatMessages(prev => [...prev, assistantMessage]);
@@ -372,6 +437,48 @@ export default function EmailTemplateEditor({
       queryClient.invalidateQueries({ queryKey: queryKeys.emailTemplate(selectedAction._id) });
     },
   });
+
+  // Mutation for saving manual edits verbatim (no AI rewrite)
+  const saveTemplateMutation = useMutation({
+    mutationFn: (data: { subject: string; content: string }) =>
+      emailTemplateService.saveEmailTemplate({
+        action_id: selectedAction._id,
+        campaign_id: campaignId,
+        subject: data.subject,
+        content: data.content,
+      }),
+    onSuccess: (saved) => {
+      queryClient.setQueryData<EmailTemplate>(
+        queryKeys.emailTemplate(selectedAction._id),
+        saved
+      );
+      setIsEditMode(false);
+      toast.success("Changes saved");
+    },
+    onError: (err) => {
+      console.error("Error saving template edits:", err);
+      toast.error("Failed to save changes");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.emailTemplate(selectedAction._id) });
+    },
+  });
+
+  const handleEnterEditMode = () => {
+    if (!emailTemplate) return;
+    if (isPreviewMode) handleBackToTemplate();
+    setEditSubject(formatEmailSubject(emailTemplate.subject));
+    setEditContent(unescapeLiteralSequences(emailTemplate.content));
+    setIsEditMode(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+  };
+
+  const handleSaveEdit = () => {
+    saveTemplateMutation.mutate({ subject: editSubject, content: editContent });
+  };
 
   // Preview generation functions
   const stopPolling = () => {
@@ -514,6 +621,92 @@ export default function EmailTemplateEditor({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
+  // Load the saved conversation for this action (restore where the user left
+  // off). Runs whenever the action changes; resets to the welcome line if the
+  // user has never chatted about this step.
+  useEffect(() => {
+    let cancelled = false;
+    // Before switching, flush the PREVIOUS action's thread (refs still hold it
+    // at this point) so a pending debounce isn't lost when the timer is cleared.
+    const prevMsgs = latestMessagesRef.current;
+    const prevIsOnlyWelcome =
+      prevMsgs.length === 1 && prevMsgs[0].id === "welcome";
+    if (actionIdRef.current !== selectedAction._id && !prevIsOnlyWelcome) {
+      emailEditorThreadService.saveThreadOnUnload(
+        actionIdRef.current,
+        campaignIdRef.current,
+        prevMsgs.map(toWire)
+      );
+    }
+    setThreadLoaded(false);
+    setSaveStatus("idle");
+    emailEditorThreadService.getThread(selectedAction._id).then((thread) => {
+      if (cancelled) return;
+      const restored = (thread.messages || []).map(fromWire);
+      setChatMessages(restored.length ? restored : [WELCOME_MESSAGE]);
+      setThreadLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAction._id]);
+
+  // Keep refs in sync for the unload handler (which can't read live state).
+  useEffect(() => {
+    latestMessagesRef.current = chatMessages;
+    actionIdRef.current = selectedAction._id;
+    campaignIdRef.current = campaignId;
+  }, [chatMessages, selectedAction._id, campaignId]);
+
+  // Debounced auto-save whenever the conversation changes (after load, so we
+  // never overwrite a real thread with the placeholder welcome).
+  useEffect(() => {
+    if (!threadLoaded) return;
+    const isOnlyWelcome =
+      chatMessages.length === 1 && chatMessages[0].id === "welcome";
+    if (isOnlyWelcome) return;
+
+    setSaveStatus("saving");
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      await emailEditorThreadService.saveThread(
+        selectedAction._id,
+        campaignId,
+        chatMessages.map(toWire)
+      );
+      setSaveStatus("saved");
+    }, 800);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [chatMessages, threadLoaded, selectedAction._id, campaignId]);
+
+  // Save on page leave (tab close / refresh / navigate away) and on unmount,
+  // so nothing is lost even if the debounce hasn't fired yet.
+  useEffect(() => {
+    const flush = () => {
+      const msgs = latestMessagesRef.current;
+      const isOnlyWelcome = msgs.length === 1 && msgs[0].id === "welcome";
+      if (isOnlyWelcome) return;
+      emailEditorThreadService.saveThreadOnUnload(
+        actionIdRef.current,
+        campaignIdRef.current,
+        msgs.map(toWire)
+      );
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("beforeunload", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+      flush(); // unmount (e.g. switching action / leaving the editor)
+    };
+  }, []);
+
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
@@ -526,19 +719,23 @@ export default function EmailTemplateEditor({
     if (isPreviewMode) {
       handleBackToTemplate();
     }
-    // Reset retry state when switching actions
+    // Reset retry + edit state when switching actions
     setRetryCount(0);
     setLastRequest(null);
+    setIsEditMode(false);
   }, [selectedAction._id]); // Watch for action ID changes
 
-  // Generate quick suggestions based on email content
+  // Quick suggestions surfaced as chips (the things people actually ask for).
   const quickSuggestions = [
-    "Make the subject line more engaging",
-    "Add a stronger call-to-action"
+    "Remove the dashes",
+    "Make it sound less AI-generated",
+    "Shorten it",
+    "Warmer opening line",
   ];
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || updateTemplateMutation.isPending || !emailTemplate) return;
+  const sendInstruction = (rawText: string) => {
+    const text = rawText.trim();
+    if (!text || updateTemplateMutation.isPending || isEditMode || !emailTemplate) return;
 
     // Close preview mode when user starts chatting
     if (isPreviewMode) {
@@ -550,25 +747,31 @@ export default function EmailTemplateEditor({
       campaign_id: campaignId!,
       subject: emailTemplate.subject,
       content: emailTemplate.content,
-      message: inputValue.trim(),
+      message: text,
+      // Send the conversation so far (minus the welcome line) so the bot
+      // remembers every prior instruction before it rewrites.
+      history: chatMessages.filter((m) => m.id !== "welcome").map(toWire),
     };
 
-    // Reset retry count for new requests
     setRetryCount(0);
     setLastRequest(updateRequest);
-
-    // Clear input immediately
     setInputValue("");
-
-    // Execute mutation
     updateTemplateMutation.mutate(updateRequest);
   };
 
+  const handleSendMessage = () => sendInstruction(inputValue);
+
   const handleQuickSuggestionClick = (suggestion: string) => {
-    // Reset retry state when using quick suggestions
-    setRetryCount(0);
-    setLastRequest(null);
-    setInputValue(suggestion);
+    sendInstruction(suggestion);
+  };
+
+  const handleClearChat = () => {
+    setChatMessages([WELCOME_MESSAGE]);
+    setSaveStatus("saving");
+    // Persist the cleared state so it stays cleared after refresh.
+    emailEditorThreadService
+      .saveThread(selectedAction._id, campaignId, [])
+      .then(() => setSaveStatus("saved"));
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -584,7 +787,9 @@ export default function EmailTemplateEditor({
 
   const handleCopyTemplate = () => {
     if (emailTemplate) {
-      const templateText = `Subject: ${emailTemplate.subject}\n\n${emailTemplate.content}`;
+      const subject = sanitizeEmailSubject(formatEmailSubject(emailTemplate.subject));
+      const content = sanitizeEmailText(unescapeLiteralSequences(emailTemplate.content));
+      const templateText = `Subject: ${subject}\n\n${content}`;
       navigator.clipboard.writeText(templateText);
       toast.success("Template copied to clipboard");
     }
@@ -641,41 +846,122 @@ export default function EmailTemplateEditor({
       {/* Left Side - Email Template Preview */}
       <div className="flex-1 flex flex-col bg-white">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">{selectedAction.name}</h1>
+        <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-gray-200">
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-semibold text-gray-900">{selectedAction.name}</h1>
             <p className="text-sm text-gray-500 mt-1">
               Step #{selectedAction._id.slice(-11)}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {isPreviewMode && (
-              <Button variant="outline" size="sm" onClick={handleBackToTemplate}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Template
-              </Button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 [&_button]:whitespace-nowrap">
+            {isEditMode ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelEdit}
+                  disabled={saveTemplateMutation.isPending}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-500 text-white"
+                  onClick={handleSaveEdit}
+                  disabled={saveTemplateMutation.isPending}
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  {saveTemplateMutation.isPending ? "Saving..." : "Save"}
+                </Button>
+              </>
+            ) : (
+              <>
+                {isPreviewMode && (
+                  <Button variant="outline" size="sm" onClick={handleBackToTemplate}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Template
+                  </Button>
+                )}
+                {!isPreviewMode && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEnterEditMode}
+                      disabled={diffState.isAnimating}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGeneratePreview}
+                      disabled={isGeneratingPreview || diffState.isAnimating}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      {isGeneratingPreview ? "Generating..." : "Preview"}
+                    </Button>
+                  </>
+                )}
+                {!isPreviewMode && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSaveAsTemplateOpen(true)}
+                    disabled={diffState.isAnimating || !emailTemplate}
+                    title="Save this email to your reusable template library"
+                  >
+                    <BookmarkPlus className="h-4 w-4 mr-2" />
+                    Save as template
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={handleCopyTemplate}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy
+                </Button>
+              </>
             )}
-            {!isPreviewMode && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleGeneratePreview}
-                disabled={isGeneratingPreview || diffState.isAnimating}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                {isGeneratingPreview ? "Generating..." : "Preview"}
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={handleCopyTemplate}>
-              <Copy className="h-4 w-4 mr-2" />
-              Copy
-            </Button>
           </div>
         </div>
 
         {/* Email Template Content or Preview */}
         <div className="flex-1 overflow-y-auto p-6">
-          {isPreviewMode ? (
+          {isEditMode ? (
+            <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-lg">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <label className="block text-sm text-gray-600 mb-1" htmlFor="edit-subject">
+                  Subject:
+                </label>
+                <Input
+                  id="edit-subject"
+                  value={editSubject}
+                  onChange={(e) => setEditSubject(e.target.value)}
+                  className="w-full text-lg font-medium text-gray-900"
+                  placeholder="Email subject"
+                />
+              </div>
+              <div className="p-6">
+                <label className="block text-sm text-gray-600 mb-2" htmlFor="edit-content">
+                  Body:
+                </label>
+                <Textarea
+                  id="edit-content"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full min-h-[320px] text-gray-800 leading-relaxed font-sans"
+                  style={{ fontSize: "15px" }}
+                  placeholder="Write your email here. Use {{firstName}} and [Company Name] for personalization."
+                />
+                <p className="mt-3 text-xs text-gray-500">
+                  Your edits are saved exactly as written (we only strip AI-slop like
+                  long dashes and stray markdown). Placeholders such as{" "}
+                  <code>{"{{firstName}}"}</code> are preserved.
+                </p>
+              </div>
+            </div>
+          ) : isPreviewMode ? (
             <ActionResult
               isLoading={isGeneratingPreview}
               status={previewStatus}
@@ -700,15 +986,15 @@ export default function EmailTemplateEditor({
                     <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                       <div className="text-sm text-gray-600 mb-1">Subject:</div>
                       {hasSubjectChanges ? (
-                        <DiffDisplay
-                          title=""
-                          oldText={formatEmailSubject(diffState.oldTemplate!.subject)}
-                          newText={formatEmailSubject(diffState.newTemplate!.subject)}
+                        <LineReplaceReveal
+                          singleLine
+                          oldText={sanitizeEmailSubject(formatEmailSubject(diffState.oldTemplate!.subject))}
+                          newText={sanitizeEmailSubject(formatEmailSubject(diffState.newTemplate!.subject))}
                           onComplete={hasContentChanges ? () => {} : handleDiffComplete}
                         />
                       ) : (
                         <div className="text-lg font-medium text-gray-900">
-                          {formatEmailSubject(emailTemplate.subject)}
+                          {sanitizeEmailSubject(formatEmailSubject(emailTemplate.subject))}
                         </div>
                       )}
                     </div>
@@ -716,15 +1002,14 @@ export default function EmailTemplateEditor({
                     {/* Email Content - either diff or normal */}
                     <div className="p-6">
                       {hasContentChanges ? (
-                        <DiffDisplay
-                          title=""
-                          oldText={unescapeLiteralSequences(diffState.oldTemplate!.content)}
-                          newText={unescapeLiteralSequences(diffState.newTemplate!.content)}
+                        <LineReplaceReveal
+                          oldText={sanitizeEmailText(unescapeLiteralSequences(diffState.oldTemplate!.content))}
+                          newText={sanitizeEmailText(unescapeLiteralSequences(diffState.newTemplate!.content))}
                           onComplete={handleDiffComplete}
                         />
                       ) : (
                         <div className="whitespace-pre-wrap text-gray-800 leading-relaxed" style={{ fontSize: '15px' }}>
-                          {unescapeLiteralSequences(emailTemplate.content)}
+                          {sanitizeEmailText(unescapeLiteralSequences(emailTemplate.content))}
                         </div>
                       )}
                     </div>
@@ -736,122 +1021,140 @@ export default function EmailTemplateEditor({
         </div>
       </div>
 
-      {/* Right Side - Email Editor Chat */}
+      {/* Right Side - Jazon assistant */}
       <div className="w-80 flex flex-col bg-white border-l border-gray-200">
-        {/* Chat Header */}
-        <div className="px-4 py-4 bg-purple-600 text-white flex items-center justify-between">
+        {/* Assistant header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-purple-600 font-bold text-sm">✨</span>
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center">
+                <img src="/jazon-mark.svg" alt="" className="w-5 h-5" />
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
             </div>
-            <div>
-              <h3 className="font-semibold text-white">Email Editor</h3>
-              <p className="text-purple-100 text-xs">Customize with AI assistance</p>
+            <div className="leading-tight">
+              <h3 className="text-sm font-semibold text-gray-900">Jazon</h3>
+              <p className="text-xs text-gray-500 flex items-center gap-1">
+                {saveStatus === "saving" ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" /> Saving…
+                  </>
+                ) : saveStatus === "saved" ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-500" /> All changes saved
+                  </>
+                ) : (
+                  "Email assistant"
+                )}
+              </p>
             </div>
           </div>
-          <button className="text-white hover:text-purple-200">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+          <button
+            onClick={handleClearChat}
+            title="Clear conversation"
+            className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-md hover:bg-gray-100"
+            disabled={updateTemplateMutation.isPending}
+          >
+            <RotateCcw className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-white">
+        {/* Conversation */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-zinc-50/60">
           {chatMessages.map((message) => (
-            <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] ${message.isUser ? 'order-2' : 'order-1'}`}>
-                {!message.isUser && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">AI</span>
-                    </div>
-                    <span className="text-xs text-gray-500">{formatTime(message.timestamp)}</span>
-                  </div>
-                )}
-                <div
-                  className={`px-4 py-3 text-sm leading-relaxed ${message.isUser
-                    ? 'bg-purple-600 text-white rounded-2xl rounded-br-md'
-                    : 'bg-gray-100 text-gray-800 rounded-2xl rounded-bl-md'
-                  }`}
-                >
-                  {message.content}
-                </div>
-                {message.isUser && (
-                  <div className="text-xs text-gray-500 text-right mt-1">
-                    {formatTime(message.timestamp)}
-                  </div>
-                )}
+            <div
+              key={message.id}
+              className={`flex flex-col ${message.isUser ? "items-end" : "items-start"}`}
+            >
+              <div
+                className={`max-w-[85%] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                  message.isUser
+                    ? "bg-purple-600 text-white rounded-2xl rounded-br-sm"
+                    : "bg-white text-gray-800 border border-gray-200 rounded-2xl rounded-bl-sm shadow-sm"
+                }`}
+              >
+                {message.content}
               </div>
+              <span className="mt-1 px-1 text-[11px] text-gray-400">
+                {message.isUser ? formatTime(message.timestamp) : "Jazon"}
+              </span>
             </div>
           ))}
-          
+
           {updateTemplateMutation.isPending && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%]">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">AI</span>
-                  </div>
-                  <span className="text-xs text-gray-500">Thinking...</span>
-                </div>
-                <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-md">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
+            <div className="flex flex-col items-start">
+              <div className="bg-white border border-gray-200 shadow-sm px-3.5 py-3 rounded-2xl rounded-bl-sm">
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0.15s" }}></div>
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0.3s" }}></div>
                 </div>
               </div>
+              <span className="mt-1 px-1 text-[11px] text-gray-400">Jazon is editing…</span>
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Quick Suggestions */}
-        <div className="px-4 py-3 border-t border-gray-200 bg-white">
-          <div className="mb-3">
-            <p className="text-xs text-gray-500 mb-2">Quick suggestions:</p>
-            <div className="space-y-2">
-              {quickSuggestions.map((suggestion, index) => (
-                <button
-                  key={index}
-                  className="flex items-center gap-2 w-full px-0 py-1 text-left hover:bg-gray-50 transition-colors rounded"
-                  onClick={() => handleQuickSuggestionClick(suggestion)}
-                  disabled={updateTemplateMutation.isPending || diffState.isAnimating}
-                >
-                  <span className="text-purple-600 text-sm">✨</span>
-                  <span className="text-gray-900 text-sm font-medium">{suggestion}</span>
-                </button>
-              ))}
-            </div>
+        {/* Composer */}
+        <div className="border-t border-gray-200 p-3 bg-white">
+          {/* Suggestion chips */}
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {quickSuggestions.map((suggestion, index) => (
+              <button
+                key={index}
+                className="px-2.5 py-1 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => handleQuickSuggestionClick(suggestion)}
+                disabled={updateTemplateMutation.isPending || diffState.isAnimating || isEditMode}
+              >
+                {suggestion}
+              </button>
+            ))}
           </div>
 
-          {/* Chat Input */}
-          <div className="space-y-2">
-            <Input
+          {/* Input pill */}
+          <div className="flex items-center gap-2 rounded-2xl border border-gray-300 bg-white py-1.5 pl-3.5 pr-1.5 transition-colors focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500">
+            <Textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="How would you like to modify this email?"
-              disabled={updateTemplateMutation.isPending || diffState.isAnimating}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm placeholder-gray-500 focus:border-purple-500 focus:ring-purple-500"
+              onKeyDown={handleKeyPress}
+              rows={1}
+              placeholder={isEditMode ? "Finish your manual edit first…" : "Ask Jazon to change this email…"}
+              disabled={updateTemplateMutation.isPending || diffState.isAnimating || isEditMode}
+              className="min-w-0 flex-1 resize-none self-center border-0 bg-transparent p-0 text-sm leading-6 placeholder-gray-400 shadow-none focus-visible:ring-0 min-h-[24px] max-h-32"
             />
-            <div className="flex justify-between items-center">
-              <p className="text-xs text-gray-500">Press Enter to send</p>
-              <Button 
-                onClick={handleSendMessage} 
-                disabled={!inputValue.trim() || updateTemplateMutation.isPending || diffState.isAnimating}
-                size="sm"
-                className="bg-purple-600 hover:bg-purple-500 text-white"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || updateTemplateMutation.isPending || diffState.isAnimating || isEditMode}
+              size="icon"
+              aria-label="Send"
+              className="ml-auto h-9 w-9 shrink-0 self-center rounded-full bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-40 grid place-items-center"
+            >
+              <Send className="h-4 w-4 -translate-x-px" />
+            </Button>
           </div>
+          <p className="mt-1.5 px-1 text-[11px] text-gray-400">
+            Jazon remembers this conversation, even after you leave. Enter to send, Shift+Enter for a new line.
+          </p>
         </div>
       </div>
+
+      {/* Save the current email to the reusable template library */}
+      <TemplateEditorDialog
+        open={saveAsTemplateOpen}
+        onOpenChange={setSaveAsTemplateOpen}
+        initial={
+          emailTemplate
+            ? {
+                name: selectedAction.name || "Saved email",
+                subject: formatEmailSubject(emailTemplate.subject),
+                body: unescapeLiteralSequences(emailTemplate.content),
+              }
+            : undefined
+        }
+        onSaved={() => toast.success("Saved to your template library")}
+      />
     </div>
   );
-} 
+}
