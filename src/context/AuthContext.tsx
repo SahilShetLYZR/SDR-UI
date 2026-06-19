@@ -176,12 +176,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (tokenData && tokenData[0]) {
         // 2. Get additional user details + bearer token
         const sdkUserData = (await lyzr.getKeysUser()) as SdkUserData;
-        console.log("SDK user data:", tokenData[0]);
-        console.log("User email:", sdkUserData?.data?.user?.email);
-        console.log("User ID:", sdkUserData?.data?.user?.user_id);
-
-        // Debug: Log current cookies to help identify auth persistence issues
-        console.log("Current cookies:", document.cookie);
 
         // Check Jazon permission directly from the SDK data
         const jazonAccess =
