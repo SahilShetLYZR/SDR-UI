@@ -13,6 +13,8 @@ interface ActionResultProps {
   from_email?: string | null;
   to_email?: string | null;
   campaignId?: string;
+  /** Heading shown above the rendered email. Defaults to the sample-run title. */
+  title?: string;
 }
 
 const Button = ({ variant, size, className, children, onClick }) => (
@@ -37,6 +39,7 @@ export default function ActionResult({
   from_email = null,
   to_email = null,
   campaignId,
+  title = "Sample Generation",
 }: ActionResultProps) {
   const created_at = new Date().toISOString();
   
@@ -102,7 +105,7 @@ export default function ActionResult({
 
   return (
     <div className="flex flex-col space-y-4 w-full h-full">
-      <h3 className="text-lg font-semibold border-b pb-2">Sample Generation</h3>
+      <h3 className="text-lg font-semibold border-b pb-2">{title}</h3>
 
       {isLoading && (
         <div className="flex items-center text-sm text-muted-foreground mt-4 flex-grow justify-center">
