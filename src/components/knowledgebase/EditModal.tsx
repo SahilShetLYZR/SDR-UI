@@ -36,15 +36,22 @@ const EditModal: React.FC<EditModalProps> = ({ document, kbId, onClose, onSaved 
   // Types that render inline in an <iframe> (pdf / text-ish).
   const isInlinePreview = ['pdf', 'txt', 'csv'].includes(docType);
 
-  // Fetch the fed content so the preview can show it (and so a rename preserves
-  // it) for entries created before we stored content locally.
+  // Fetch the fed content (and recover the ingested URL) so the preview can
+  // show it and a rename preserves it — for entries created before we stored
+  // content/doc_link locally. Legacy website entries have no doc_link, so we
+  // recover the crawled URL from the RAG store's source metadata.
+  const needsUrlBackfill = website && !document.doc_link;
   useEffect(() => {
-    if (document.content) return;
+    if (document.content && !needsUrlBackfill) return;
     let cancelled = false;
     setLoadingContent(true);
     KnowledgeBaseService.getDocumentContent(kbId, document.name, document.doc_link || '')
-      .then((c) => {
-        if (!cancelled && c) setContent(c);
+      .then(({ content: fetchedContent, docLink: recoveredUrl }) => {
+        if (cancelled) return;
+        if (fetchedContent && !document.content) setContent(fetchedContent);
+        // Show what was ingested: fill the URL field for legacy entries that
+        // never stored a doc_link. Don't clobber anything the user typed.
+        if (recoveredUrl && needsUrlBackfill) setUrl((prev) => prev || recoveredUrl);
       })
       .finally(() => {
         if (!cancelled) setLoadingContent(false);

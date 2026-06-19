@@ -35,7 +35,6 @@ export const Login = () => {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
 
-  // Reset auth trigger when navigating to login page
   useEffect(() => {
     if (location.pathname.includes("/auth/login") && previousPath.current !== location.pathname) {
       hasTriggeredAuth.current = false;
@@ -45,29 +44,26 @@ export const Login = () => {
 
   useEffect(() => {
     const handleAuth = async () => {
-      // If already authenticated, redirect
       if (!isLoading && isAuthenticated) {
         const redirectPath = location.state?.from || "/";
         navigate(redirectPath);
         return;
       }
 
-      // Trigger auth when not authenticated and on login page
       if (!isLoading && !isAuthenticated && !hasTriggeredAuth.current && location.pathname.includes("/auth/login")) {
         hasTriggeredAuth.current = true;
-        // Local dev: authenticate without the Lyzr Studio SDK / redirect.
+
         if (isDevMode()) {
           await checkAuth();
           return;
         }
-        // Local Studio auth: a popup needs a user gesture, so just resume
-        // any existing session here and otherwise wait for the button click.
+
         if (isLocalStudioAuth()) {
           await checkAuth();
           return;
         }
+
         console.log("Triggering auth modal");
-        // Re-initialize SDK and trigger auth
         const { default: lyzr } = await import("lyzr-agent");
         await lyzr.init("pk_c14a2728e715d9ea67bf");
         await checkAuth();
@@ -78,10 +74,8 @@ export const Login = () => {
   }, [isLoading, isAuthenticated, navigate, location, checkAuth]);
 
   const handleLoginClick = async () => {
-    // Clear all auth-related storage
     localStorage.clear();
     sessionStorage.clear();
-    // Clear cookies
     document.cookie.split(";").forEach((c) => {
       document.cookie = c
         .replace(/^ +/, "")
@@ -91,8 +85,6 @@ export const Login = () => {
     window.location.reload();
   };
 
-  // Local Studio sign-in: Memberstack Google popup (works on localhost,
-  // unlike the studio.lyzr.ai redirect), then build the Pagos session.
   const handleStudioGoogleLogin = async () => {
     setIsSigningIn(true);
     setSignInError(null);

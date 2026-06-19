@@ -144,34 +144,34 @@ export class ProspectsService {
           page_size: params.size || 10
         }
       });
-      
-      // Transform the campaign prospects to match the expected ProspectsResponse format
-      const campaignProspects = response.data || [];
-      const transformedItems: ProspectType[] = Array.isArray(campaignProspects) 
-        ? campaignProspects.map(item => ({
-            id: item._id || item.prospect_id,
-            name: item.prospect_details ? 
-              item.prospect_details.name || 
-              `${item.prospect_details.first_name || ''} ${item.prospect_details.last_name || ''}`.trim() : '',
-            email: item.prospect_details ? item.prospect_details.email : '',
-            organization: item.prospect_details ? 
-              item.prospect_details.organization || item.prospect_details.company_name || '' : '',
-            designation: item.prospect_details ? 
-              item.prospect_details.designation || item.prospect_details.position || '' : '',
-            engagementScore: item.engagement_score || 0,
-            engagementStatus: item.engagement_status || '',
-            sequenceStatus: item.phase || item.sequence_status || '' // Map phase to sequenceStatus, fallback to sequence_status
-          }))
-        : [];
-      
+
+      // Backend now returns PaginatedProspectsResponse: { prospects: CampaignProspect[], pagination: {...} }
+      // with fields flat on each prospect record (no prospect_details wrapper).
+      const data = response.data || {};
+      // Tolerate both the new shape and the legacy bare-array shape during rollover.
+      const rawProspects: CampaignProspect[] = Array.isArray(data) ? data : (data.prospects || []);
+      const pagination = data.pagination || {};
+
+      const transformedItems: ProspectType[] = rawProspects.map(item => ({
+        id: item.id,
+        name: item.name || '',
+        email: item.email || '',
+        organization: item.company || '',
+        designation: item.position || '',
+        engagementScore: item.engagement_score || 0,
+        engagementStatus: item.engagement_status || '',
+        sequenceStatus: item.phase || item.sequence_status || '',
+      }));
+
+      const size = params.size || 10;
       const transformedResponse: ProspectsResponse = {
         items: transformedItems,
-        total: transformedItems.length,
-        page: params.page || 1,
-        size: params.size || 10,
-        pages: Math.ceil(transformedItems.length / (params.size || 10))
+        total: pagination.total ?? transformedItems.length,
+        page: pagination.current_page ?? (params.page || 1),
+        size: pagination.limit ?? size,
+        pages: pagination.total_pages ?? Math.ceil(transformedItems.length / size),
       };
-      
+
       return transformedResponse;
     } catch (error) {
       console.error('Error fetching prospects:', error);

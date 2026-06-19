@@ -53,7 +53,6 @@ export const AnimatedRoutes = ()=> {
             <Route key={Path.SETTINGS} path={Path.SETTINGS} element={<Settings />} />
             <Route key={Path.TEMPLATES} path={Path.TEMPLATES} element={<TemplatesPage />} />
             <Route key={Path.DOMAIN_CONFIGS} path={Path.DOMAIN_CONFIGS} element={<DomainConfigPage />} />
-            <Route key={Path.ADMIN} path={Path.ADMIN} element={<AdminDashboard />} />
           </Route>
           <Route key="*" path="*" element={<NotFound />} />
         </Routes>

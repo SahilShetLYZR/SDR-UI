@@ -5,7 +5,6 @@ import { useSidebarStore } from '@/store/sidebarStore';
 import { cn } from '@/lib/utils';
 import AvatarButton from "@/components/layout/AvatarButton.tsx";
 import { Path } from '@/lib/types';
-import { useAdmin } from '@/hooks/useAdmin';
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -66,7 +65,6 @@ const Sidebar: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
-  const { isAdmin, loading: adminLoading } = useAdmin();
 
   const isSidebarOpen = isHovered || isDropdownOpen;
 
@@ -83,11 +81,7 @@ const Sidebar: React.FC = () => {
         icon={<Send className="h-5 w-5" strokeWidth={1.75} />}
         label="Campaigns"
         to="/campaign"
-        active={
-          location.search.includes('from=admin')
-            ? false
-            : location.pathname.includes('/campaign')
-        }
+        active={location.pathname.includes('/campaign')}
         isExpanded={isExpanded}
       />
       <NavItem
@@ -104,18 +98,6 @@ const Sidebar: React.FC = () => {
         active={location.pathname.startsWith('/settings')}
         isExpanded={isExpanded}
       />
-      {!adminLoading && isAdmin && (
-        <NavItem
-          icon={<ShieldCheck className="h-5 w-5" strokeWidth={1.75} />}
-          label="Admin Dashboard"
-          to={`/${Path.ADMIN}`}
-          active={
-            location.pathname.startsWith(`/${Path.ADMIN}`) ||
-            location.search.includes('from=admin')
-          }
-          isExpanded={isExpanded}
-        />
-      )}
     </>
   );
 

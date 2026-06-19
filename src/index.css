@@ -143,3 +143,11 @@
     animation: none;
   }
 }
+
+/* Hide the "Powered by Lyzr Agent Studio" floating badge injected by the
+   lyzr-agent SDK (#lyzr-badge appended to <body> on init). The SDK exposes no
+   disable method, so we suppress it via CSS — durable across SDK reinstalls.
+   Only appears on real Studio sessions (prod), never on the local bypass. */
+#lyzr-badge {
+  display: none !important;
+}

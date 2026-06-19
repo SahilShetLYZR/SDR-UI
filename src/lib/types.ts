@@ -16,7 +16,6 @@ export enum Path {
   SETTING = "setting",
   TEMPLATES = "templates",
   DOMAIN_CONFIGS = "settings/domain-configs",
-  ADMIN = "admin",
 }
 
 export type ICreateCampaignSettings = {

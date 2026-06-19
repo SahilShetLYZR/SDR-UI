@@ -137,18 +137,27 @@ export const KnowledgeBaseService = {
   },
 
   /**
-   * Fetch the text the agent holds for a document (backfills entries created
-   * before content was stored locally). Returns "" if unavailable.
+   * Fetch the text (and recovered source URL) the agent holds for a document.
+   * Backfills entries created before content/doc_link were stored locally —
+   * the RAG store still carries the ingested URL in its source metadata.
+   * Returns empty strings if unavailable.
    */
-  getDocumentContent: async (kbId: string, name: string, docLink = ""): Promise<string> => {
+  getDocumentContent: async (
+    kbId: string,
+    name: string,
+    docLink = ""
+  ): Promise<{ content: string; docLink: string }> => {
     try {
       const response = await api.get(`/kb/document/content`, {
         params: { kb_id: kbId, name, doc_link: docLink },
       });
-      return response.data?.content ?? "";
+      return {
+        content: response.data?.content ?? "",
+        docLink: response.data?.doc_link ?? "",
+      };
     } catch (error) {
       console.error('Error fetching document content:', error);
-      return "";
+      return { content: "", docLink: "" };
     }
   },
 

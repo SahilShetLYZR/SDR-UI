@@ -85,21 +85,22 @@ const AnalyticsPage: React.FC = () => {
         currentPage,
         pageSize
       );
-      
-      // Transform the campaign prospects to match the expected Prospect format
-      const transformedProspects: Prospect[] = campaignProspects.map(item => ({
-        id: item._id || item.prospect_id,
-        first_name: item.prospect_details?.first_name || '',
-        last_name: item.prospect_details?.last_name || '',
-        email: item.prospect_details?.email || '',
-        company_name: item.prospect_details?.company_name || '',
-      }));
-      
+
+      // Backend returns PaginatedProspectsResponse with fields flat on each prospect
+      // record (no prospect_details wrapper). Split `name` into first/last for display.
+      const transformedProspects: Prospect[] = campaignProspects.prospects.map(item => {
+        const [firstName, ...lastNameParts] = (item.name || '').trim().split(/\s+/);
+        return {
+          id: item.id,
+          first_name: firstName || '',
+          last_name: lastNameParts.join(' ') || '',
+          email: item.email || '',
+          company_name: item.company || '',
+        };
+      });
+
       setProspects(transformedProspects);
-      
-      // Calculate total pages based on the length of the array
-      // This is a simple approach; in a real app, you might want to get this from the API
-      setTotalPages(Math.ceil(transformedProspects.length / pageSize));
+      setTotalPages(campaignProspects.pagination?.total_pages ?? Math.ceil(transformedProspects.length / pageSize));
     } catch (error) {
       console.error('Error fetching prospects:', error);
       toast({

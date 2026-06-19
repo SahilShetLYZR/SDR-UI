@@ -295,7 +295,7 @@ export default function OtherSettings({ settings, campaignId, settingsId, onSett
 
         <div className="space-y-1">
           <Label>Use BCC</Label>
-          <p className="text-sm text-muted-foreground">Send emails using BCC instead of TO field</p>
+          <p className="text-sm text-muted-foreground">Send emails using BCC instead of To field</p>
         </div>
         <div className="flex items-center gap-2">
           <Switch 

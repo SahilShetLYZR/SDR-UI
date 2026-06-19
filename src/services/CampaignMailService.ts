@@ -1,6 +1,5 @@
-// src/services/CampaignMailService.ts (Example)
+// src/services/CampaignMailService.ts
 import api from '@/lib/api';
-import { CampaignMail } from '@/types/campaignMail'; // Define this type based on backend model
 
 // Define CampaignMail type based on backend (simplified for polling)
 export interface ActionStatus {

@@ -21,6 +21,9 @@ export interface GeneralSettings {
   signature_image: SettingsField;
   high_engagement_notifiers: SettingsField;
   threshold: SettingsField;
+  // AI-assisted disclosure for inbound replies (outbound mails never mention AI).
+  ai_disclosure_enabled?: SettingsField;
+  ai_disclosure_text?: SettingsField;
   [key: string]: SettingsField;
 }
 
@@ -65,6 +68,7 @@ export interface CampaignSettings {
   materials: MaterialsSettings;
   schedule: ScheduleSettings;
   others: OtherSettings;
+  campaign_owner?: string;
   created_at: string;
   updated_at: string;
 }

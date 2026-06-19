@@ -64,7 +64,7 @@ class EmailTemplateService {
 
   async updateEmailTemplate(data: EmailTemplateUpdateRequest): Promise<EmailTemplateUpdateResponse> {
     try {
-      const response = await api.patch(`workflow/action/email-template`, data);
+      const response = await api.patch(`/workflow/action/email-template`, data);
 
 
       return {

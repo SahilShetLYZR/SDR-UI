@@ -13,7 +13,6 @@ import {
 import useMeasure from "react-use-measure";
 
 import { cn } from "@/lib/utils";
-import { ISequence } from "@/lib/types";
 
 export type Item = {
   order: number;
@@ -23,7 +22,11 @@ export type Item = {
   description: string;
 };
 
-interface SortableListItemProps<T> {
+// Minimum shape required to render a sortable list row. Anything with an `id`
+// (string or number) is fine — the actual item type is provided by callers.
+type WithId = { id: string | number };
+
+interface SortableListItemProps<T extends WithId> {
   item: T;
   order: number;
   disabled: boolean;
@@ -33,13 +36,13 @@ interface SortableListItemProps<T> {
   handleDrag: () => void;
 }
 
-function SortableListItem({
+function SortableListItem<T extends WithId>({
   item,
   renderExtra,
   handleDrag,
   className,
   disabled,
-}: SortableListItemProps<ISequence & { order: number }>) {
+}: SortableListItemProps<T>) {
   let [ref, bounds] = useMeasure();
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggable] = useState(true);
@@ -144,19 +147,19 @@ function SortableListItem({
 
 SortableListItem.displayName = "SortableListItem";
 
-interface SortableListProps<T> {
+interface SortableListProps<T extends WithId> {
   items: T[];
   disabled: boolean;
   onReorder: (newOrder: T[]) => void;
   renderItem: (item: T, disabled: boolean) => ReactNode;
 }
 
-function SortableList({
+function SortableList<T extends WithId>({
   items,
   disabled,
   renderItem,
   onReorder,
-}: SortableListProps<ISequence>) {
+}: SortableListProps<T>) {
   if (items && !disabled) {
     return (
       <LayoutGroup>

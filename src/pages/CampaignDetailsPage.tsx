@@ -11,20 +11,18 @@ import { campaignService, ApiCampaign } from '@/services/campaignService';
 import { campaignSettingsService, CampaignSettings } from '@/services/campaignSettingsService';
 import PageHeader from '@/components/layout/PageHeader';
 import { useToast } from '@/components/ui/use-toast';
-import { useAdmin } from '@/hooks/useAdmin';
-import { adminService } from '@/services/adminService';
 
 const CampaignDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { isAdmin, loading: adminLoading } = useAdmin();
 
   const [campaign, setCampaign] = useState<ApiCampaign | null>(null);
   const [settings, setSettings] = useState<CampaignSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const searchParams = new URLSearchParams(location.search);
   const isFromAdmin = searchParams.get('from') === 'admin';
 
@@ -55,7 +53,6 @@ const CampaignDetailsPage: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    if (adminLoading) return;
     // Only fetch data if it hasn't been loaded yet or if the ID changes
     if (!dataLoadedRef.current || !campaign) {
       const fetchCampaignData = async () => {
@@ -68,18 +65,13 @@ const CampaignDetailsPage: React.FC = () => {
           setIsLoading(true);
           setError(null);
 
-          let campaignData: ApiCampaign | undefined;
-          if (isFromAdmin && isAdmin) {
-            const adminCampaigns = await adminService.getAdminCampaigns(1, 100);
-            campaignData = adminCampaigns.items.find(camp => camp._id === id);
-          } else {
-            const userCampaigns = await campaignService.getCampaigns();
-            campaignData = userCampaigns.find(camp => camp._id === id);
-          }
+          // Fetch campaign details
+          const campaigns = await campaignService.getCampaigns();
+          const campaignData = campaigns.find(camp => camp._id === id);
 
           if (!campaignData) {
             setError('Campaign not found');
-            navigate(isFromAdmin ? '/admin' : '/campaign');
+            navigate('/campaign');
             return;
           }
 
@@ -116,7 +108,7 @@ const CampaignDetailsPage: React.FC = () => {
 
       fetchCampaignData();
     }
-  }, [id, navigate, toast, campaign, isAdmin, adminLoading]);
+  }, [id, navigate, toast, campaign]);
 
   // Reset the dataLoaded ref when the ID changes
   useEffect(() => {
@@ -127,7 +119,6 @@ const CampaignDetailsPage: React.FC = () => {
 
   // Check if we're on the analytics route
   const isAnalyticsRoute = location.pathname.endsWith('/analytics');
-
 
   if (isLoading) {
     return (
@@ -151,7 +142,7 @@ const CampaignDetailsPage: React.FC = () => {
     return (
       <div className="h-full flex flex-col items-center justify-center">
         <p className="text-red-500 mb-4">{error || 'Campaign not found'}</p>
-        <Button onClick={() => navigate(isFromAdmin ? '/admin' : '/campaign')} variant="outline">
+        <Button onClick={() => navigate('/campaign')} variant="outline">
           Return to Campaigns
         </Button>
       </div>
@@ -164,7 +155,7 @@ const CampaignDetailsPage: React.FC = () => {
         eyebrow="Campaign"
         leading={
           <Link
-            to={isFromAdmin ? "/admin" : "/campaign"}
+            to="/campaign"
             aria-label="Back to campaigns"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
           >

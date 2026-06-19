@@ -38,7 +38,7 @@ const KnowledgeBase: React.FC = () => {
       } else {
         toast({
           title: "Error",
-          description: "Could not find knowledge base ID for this campaign!!",
+          description: "Could not find knowledge base ID for this campaign",
           variant: "destructive"
         });
         return;
