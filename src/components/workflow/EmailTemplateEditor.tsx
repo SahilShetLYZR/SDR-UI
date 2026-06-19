@@ -20,9 +20,6 @@ import {
   emailEditorThreadService,
   EditorThreadMessage,
 } from "@/services/emailEditorThreadService";
-import { ProspectsService } from "@/services/prospectsService";
-import { ActionApiService } from "@/services/ActionApiService";
-import { CampaignMailService } from "@/services/CampaignMailService";
 import ActionResult from "@/components/workflow/ActionResult";
 import { toast } from "sonner";
 
@@ -247,7 +244,6 @@ export default function EmailTemplateEditor({
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Query for fetching email template
   const {
@@ -480,113 +476,25 @@ export default function EmailTemplateEditor({
     saveTemplateMutation.mutate({ subject: editSubject, content: editContent });
   };
 
-  // Preview generation functions
-  const stopPolling = () => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-  };
-
-  const pollActionResult = (resultId: string) => {
-    stopPolling(); // Clear any previous interval
-    let attempts = 0;
-    const maxAttempts = 150; // 5 minutes with 2-second intervals
-
-    pollingIntervalRef.current = setInterval(async () => {
-      attempts += 1;
-      if (attempts > maxAttempts) {
-        stopPolling();
-        setPreviewError("Preview generation timed out. Please try again.");
-        setIsGeneratingPreview(false);
-        return;
-      }
-
-      try {
-        const result = await CampaignMailService.getActionResult(resultId);
-
-        // Update status text
-        if (result.action_status?.status_text) {
-          setPreviewStatus(result.action_status.status_text);
-        }
-
-        // Check for backend error
-        if (result.action_status?.error_text) {
-          stopPolling();
-          setPreviewError(result.action_status.error_text);
-          setIsGeneratingPreview(false);
-          return;
-        }
-
-        // Check if content is filled (success condition)
-        if (result.subject && result.content) {
-          stopPolling();
-          setPreviewData({
-            subject: result.subject,
-            content: result.content,
-            from_email: result.from_email,
-            to_email: result.to_email,
-          });
-          setIsGeneratingPreview(false);
-          setPreviewStatus(null);
-        }
-      } catch (error: any) {
-        if (error?.response?.status !== 404 || attempts > 5) {
-          console.error("Polling error:", error);
-          stopPolling();
-          setPreviewError("Failed to check preview generation status.");
-          setIsGeneratingPreview(false);
-        } else {
-          setPreviewStatus("Waiting for generation process to start...");
-        }
-      }
-    }, 2000);
-  };
-
-  const handleGeneratePreview = async () => {
-    if (!campaignId || !selectedAction._id) {
-      toast.error("Missing campaign or action information");
+  // Render a faithful preview of the email the user actually edited — the same
+  // subject and body shown in the template view, formatted as it lands in an
+  // inbox. This does NOT call run_sample (which re-generates a brand-new AI
+  // email per prospect and appends a backend signature); previewing must show
+  // what was written, not a different email.
+  const handleGeneratePreview = () => {
+    if (!emailTemplate) {
+      toast.error("Email template is not loaded yet");
       return;
     }
 
-    setIsGeneratingPreview(true);
     setPreviewError(null);
-    setPreviewStatus("Loading prospects...");
-
-    try {
-      // Get prospects for the campaign
-      const prospectsData = await ProspectsService.getCampaignProspects(campaignId, 1, 1);
-      const prospects = prospectsData.prospects || [];
-
-      if (prospects.length === 0) {
-        toast.error("No prospects found for this campaign. Please add prospects first.");
-        setIsGeneratingPreview(false);
-        return;
-      }
-
-      // Use the first prospect
-      const firstProspect = prospects[0];
-      setPreviewStatus("Generating preview...");
-
-      // Call run_sample API
-      const response = await ActionApiService.runSampleAction(
-        campaignId,
-        firstProspect.id,
-        selectedAction._id
-      );
-
-      // Start polling for results
-      setPreviewStatus("Processing...");
-      pollActionResult(response.action_result_id);
-      setIsPreviewMode(true);
-
-    } catch (error: any) {
-      console.error("Failed to generate preview:", error);
-      const errorMsg = error?.response?.data?.detail || "Failed to generate preview. Please try again.";
-      setPreviewError(errorMsg);
-      setIsGeneratingPreview(false);
-      toast.error(errorMsg);
-    }
+    setPreviewStatus(null);
+    setIsGeneratingPreview(false);
+    setPreviewData({
+      subject: sanitizeEmailSubject(formatEmailSubject(emailTemplate.subject)),
+      content: sanitizeEmailText(unescapeLiteralSequences(emailTemplate.content)),
+    });
+    setIsPreviewMode(true);
   };
 
   const handleBackToTemplate = () => {
@@ -594,7 +502,6 @@ export default function EmailTemplateEditor({
     setPreviewData(null);
     setPreviewError(null);
     setPreviewStatus(null);
-    stopPolling();
   };
 
   // Handle diff animation completion
@@ -704,13 +611,6 @@ export default function EmailTemplateEditor({
       window.removeEventListener("beforeunload", flush);
       document.removeEventListener("visibilitychange", onVisibility);
       flush(); // unmount (e.g. switching action / leaving the editor)
-    };
-  }, []);
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      stopPolling();
     };
   }, []);
 
@@ -963,6 +863,7 @@ export default function EmailTemplateEditor({
             </div>
           ) : isPreviewMode ? (
             <ActionResult
+              title="Preview"
               isLoading={isGeneratingPreview}
               status={previewStatus}
               error={previewError}
