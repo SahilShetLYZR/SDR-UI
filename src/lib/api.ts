@@ -36,6 +36,18 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // No response at all = the request never reached the server (network
+    // error, CORS, timeout, blocked by a service worker). Rejecting with
+    // `error.response` here would hand callers `undefined` — the cryptic
+    // "Error fetching campaigns: undefined" you see on prod. Surface a real
+    // message and reject with the actual error so it stays debuggable.
+    if (!error?.response) {
+      toast.error(
+        "Couldn't reach the server. Check your connection and try again."
+      );
+      return Promise.reject(error);
+    }
+
     switch (error?.response?.status) {
       case 403:
         // Reject (below) instead of swallowing: returning null resolved the
